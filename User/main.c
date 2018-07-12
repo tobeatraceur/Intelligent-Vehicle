@@ -83,6 +83,8 @@ int main(void)
 	{
      // keyvalue = 5;                                                   // 显示当前界面
 
+		//Wp_SetPortOutputValue(1,1);																			//调用Wp_SetPortOutputValue(u8 port, u8 value)，使Out1输出1
+																																			//（注意这里Out端口不是从0开始）
         switch(keyvalue)
         {
             case 1:                                                     // 显示姿态信息
@@ -300,16 +302,16 @@ int main(void)
                     // 计算灰度传感器光通量值
                     for (n = 0; n < 6; n++)
                     {
-                        luxvalue[n] = Wp_CalculateLuxChannel(9+n);       // 测试使用，计算Lux
+                        luxvalue[n] = Wp_CalculateLuxChannel(7+n);       // 测试使用，计算Lux    灰度传感器从第7个开始
                     }
 
                 break;
-										
-						case 7:                                                     // 测试温度传感器
+                   
+						case 7:                                                     // ???????
 										j++;
                     if (j == 1)
                     {
-                        Wp_ClearOled();                                 // 清屏
+                        Wp_ClearOled();                                 // ??
                     }
                     if (j == 2)
                     {
@@ -320,28 +322,28 @@ int main(void)
                     i = 0;
                    
                     
-//                    Wp_DisfloatIntegerandDecimal(0, 0, powervalue, 2, 1);               // 电源电压
-//                    Wp_DisfloatIntegerandDecimal(4, 0, analogvalue[0], 1, 1);           // 模拟1~15通道电压
-//                    Wp_DisfloatIntegerandDecimal(8, 0, analogvalue[1], 1, 1);
-//                    Wp_DisfloatIntegerandDecimal(12, 0, analogvalue[2], 1, 1);
+//                  Wp_DisfloatIntegerandDecimal(0, 0, powervalue, 2, 1);               // ????
+//                  Wp_DisfloatIntegerandDecimal(4, 0, analogvalue[0], 1, 1);           // ??1~15????
+//                  Wp_DisfloatIntegerandDecimal(8, 0, analogvalue[1], 1, 1);
+//                  Wp_DisfloatIntegerandDecimal(12, 0, analogvalue[2], 1, 1);
 //                    
-//                    Wp_DisfloatIntegerandDecimal(0, 1, analogvalue[3], 1, 1);
-//                    Wp_DisfloatIntegerandDecimal(4, 1, analogvalue[4], 1, 1);
-//                    Wp_DisfloatIntegerandDecimal(8, 1, analogvalue[5], 1, 1);
-//                    Wp_DisfloatIntegerandDecimal(12, 1, analogvalue[6], 1, 1);
+//                  Wp_DisfloatIntegerandDecimal(0, 1, analogvalue[3], 1, 1);
+//                  Wp_DisfloatIntegerandDecimal(4, 1, analogvalue[4], 1, 1);
+//                  Wp_DisfloatIntegerandDecimal(8, 1, analogvalue[5], 1, 1);
+//                  Wp_DisfloatIntegerandDecimal(12, 1, analogvalue[6], 1, 1);
 //                    
-//                    Wp_DisfloatIntegerandDecimal(0, 2, analogvalue[7], 1, 1);
-//                    Wp_DisfloatIntegerandDecimal(4, 2, analogvalue[8], 1, 1);
-//                    Wp_DisfloatIntegerandDecimal(8, 2, analogvalue[9], 1, 1);
-//                    Wp_DisfloatIntegerandDecimal(12, 2, analogvalue[10], 1, 1);
+//                  Wp_DisfloatIntegerandDecimal(0, 2, analogvalue[7], 1, 1);
+//                  Wp_DisfloatIntegerandDecimal(4, 2, analogvalue[8], 1, 1);
+//                  Wp_DisfloatIntegerandDecimal(8, 2, analogvalue[9], 1, 1);
+										Wp_DisfloatIntegerandDecimal(0, 0, analogvalue[10], 1, 4);
 //                    
-//                    Wp_DisfloatIntegerandDecimal(0, 3, analogvalue[11], 1, 1);
-											Wp_DisfloatIntegerandDecimal(4, 2, analogvalue[12], 1, 4);
-											Wp_DisfloatIntegerandDecimal(8, 3, analogvalue[13], 1, 4);
-//                    Wp_DisfloatIntegerandDecimal(12, 3, analogvalue[14], 1, 1);
+										Wp_DisfloatIntegerandDecimal(0, 1, analogvalue[11], 1, 4);
+										Wp_DisfloatIntegerandDecimal(0, 2, analogvalue[12], 1, 4);
+										Wp_DisfloatIntegerandDecimal(0, 3, analogvalue[13], 1, 4);
+//                  Wp_DisfloatIntegerandDecimal(12, 3, analogvalue[14], 1, 1);
                     
                 break;
-                    
+										
             default:
                 break;
         }
@@ -373,17 +375,24 @@ int main(void)
 **-------------------------------------------------------------------------------------------------------------
 ***************************************************************************************************************/
 void Wp_Sev_TimerPro(void)
-{	
-		int preState = 0;												//轨道循迹时使用，用来记录前一时刻轨道信息，a = 0代表左边有轨道
+{
+		static int leftturnstate = 0;									// 用于灭火程序，标记车是否在左转或右转状态，1代表在该状态
+		static int rightturnstate = 0;
+		static int normalstate = 1;										// 用于灭火程序，标记车是否在检测到异常状态，0代表在异常状态
+		static int leftreassure = 0;										// 用于灭火程序，记录是否在左边/右边确认火源阶段，1代表在该状态
+		static int rightreassure = 0;
+		static int leftonwork = 0;											// 用于灭火程序，记录是否在左边/右边工作状态，1代表在该状态
+		static int rightonwork = 0;
+		static int backtonormal = 0;										// 用于灭火程序，记录是否在工作完回到normal的状态中，1代表在该状态
+		static int preinfrareddistance[4] = {0};					// 记录前一状态的红外距离，用在目标追踪里，在遇到墙等极端情况停下时可以判断移动物体的方位	
+		static int counttime = 0;											// 服务于目标追踪功能，用于记录时间，从而实现定时
+		static int preState = 0;												// 轨道循迹时使用，用来记录前一时刻轨道信息，preState = 0代表左边有轨道
+
 	static u8 i = 0;                    // LED1闪烁
     static u16 j = 0;                   // LED2闪烁
     static u8 k = 0;                    // 刷新按键使用
 	static u8 h = 0;                    // 读取姿态信息使用
     static u8 n = 0;
-	//以下两个测试串口
-	uint8_t count = 0;
-	uint8_t check_sum = 0;
-	
 //  static u16 m = 0;
     
     static u8 runflag = 0;              // 运行标志
@@ -440,39 +449,11 @@ void Wp_Sev_TimerPro(void)
             Wp_KeyRefreshState(&key_up);                            // 刷新按键状态
             if (Wp_KeyAccessTimes(&key_up, KEY_ACCESS_READ) != 0)
             {
-                Wp_KeyAccessTimes(&key_up, KEY_ACCESS_REFRESH);
+                Wp_KeyAccessTimes(&key_up, KEY_ACCESS_REFRESH);             
+							
+							  Wp_Usart2_SendStr("CC");								//测试发送字符串
                 
-							//Wp_Usart2_SendInt(3);
-							  //Wp_Usart2_SendChar(0x55);
-							
-							
-	
-//	Wp_Usart2_SendChar(0x55);													                // 开始位1、2
-//	Wp_Usart2_SendChar(0xAA);
-//	Wp_Usart2_SendChar(0xFE);												// 设备ID
-//    Wp_Usart2_SendChar(0x01);	                                        // 控制字
-//	Wp_Usart2_SendChar(0x00);										// 参数长度
-//	
-//	for(count = 0; count < 3; count++)
-//	{
-//		Wp_Usart2_SendChar(0x11);										// 写数据组
-//	}
-//	
-//	check_sum = 0x55;
-//	check_sum += 0xAA;
-//	check_sum += 0xFE;
-//	check_sum += 0x01;
-//	check_sum += 0x00;
-//    
-//	for(count = 0; count < 3; count++)
-//	{
-//		check_sum += 0x11;											    // 校验和计算
-//	}
-//    
-//	Wp_Usart2_SendChar(check_sum);                                                              // 发送数据
-//    Wp_Usart2_SendChar(check_sum);                                                              // 需要发送两遍校验和，使用SN65HVD75，首次出现此问题
-							Wp_Usart2_SendChar(UART2_data);
-                keyvalue++;                                         // 切换屏幕状态
+							  keyvalue++;                                         // 切换屏幕状态
                 if (keyvalue >= 8)
                 {
                     keyvalue = 1;
@@ -484,9 +465,7 @@ void Wp_Sev_TimerPro(void)
             {
                 Wp_KeyAccessTimes(&key_down, KEY_ACCESS_REFRESH);
                 
-							//Wp_Usart2_SendInt(4);
-							//USART_SendData(USART2, 1);
-							
+							Wp_Usart2_SendChar(0x55);								//测试发送Char
                 keyvalue--;                                         // 切换屏幕状态
                 if (keyvalue <= 0)
                 {
@@ -519,15 +498,7 @@ void Wp_Sev_TimerPro(void)
                 runflag = 1;                                        // 按下OK按键运动开始
             }
         }
-				
-        if (analogvalue[12] > analogvalue[13]+0.005)
-				{
-						Wp_SetPortOutputValue(1, 1);
-				}
-				 if (analogvalue[13] > analogvalue[12]+0.005)
-				{
-						Wp_SetPortOutputValue(1, 0);
-				}
+        
         /*
         // 测试使用，按键按下前进，后退，左转，右转
         if (key_up())                   // 前进
@@ -559,6 +530,347 @@ void Wp_Sev_TimerPro(void)
             fourthspeedtemp = -2000;          
         }
         */
+				
+				// 测试使用，蓝牙控制
+				if (runflag)
+        {				
+            if (UART2_data == 0x01)
+            {
+                firstspeedtemp = -100;         // ??
+                secondspeedtemp = 100;
+                thirdspeedtemp = 100;
+                fourthspeedtemp = -100;
+            }
+            else if(UART2_data == 0x02)
+            {
+                firstspeedtemp = 100;          // ??
+                secondspeedtemp = -100;
+                thirdspeedtemp = -100;
+                fourthspeedtemp = 100;          
+            }
+            else if(UART2_data == 0x03)
+            {
+                firstspeedtemp = 100;          // ???
+                secondspeedtemp = 100;
+                thirdspeedtemp = -100;
+                fourthspeedtemp = -100;
+            }
+            else if(UART2_data == 0x04)
+            {
+                firstspeedtemp = -100;         // ???
+                secondspeedtemp = -100;
+                thirdspeedtemp = 100;
+                fourthspeedtemp = 100;
+            }
+					}
+				
+				
+				/*
+				// 测试使用，转90度，缓慢前进固定距离
+				if (runflag)
+				{
+						runtimes++;
+						if (runtimes > 0 && runtimes < 50)
+						{
+								firstspeedtemp = 500;							 // 左转90度
+								secondspeedtemp = 500;
+								thirdspeedtemp = 500;
+								fourthspeedtemp = 500; 
+						}
+						if (runtimes >= 50 && runtimes < 100)
+						{
+								firstspeedtemp = -500;							 // 右转90度
+								secondspeedtemp = -500;
+								thirdspeedtemp = -500;
+								fourthspeedtemp = -500; 
+						}
+						if (runtimes >= 100 && runtimes < 150)
+						{
+								firstspeedtemp = -200;							 // 前进
+								secondspeedtemp = 200;
+								thirdspeedtemp = 200;
+								fourthspeedtemp = -200; 
+						}
+						if (runtimes >= 150 && runtimes < 200)
+						{
+								firstspeedtemp = 150;							 // 前进
+								secondspeedtemp = -150;
+								thirdspeedtemp = -150;
+								fourthspeedtemp = 150; 
+						}
+						if (runtimes >= 200)
+						{
+								runtimes = 0;
+						}
+				}
+				*/
+				
+				/*
+				// 灭火程序。前进，寻找高温，确认找到后转向，执行，转回
+				if (runflag)
+        {
+						if (normalstate == 1 && leftturnstate == 0 && rightturnstate == 0)
+						{
+								if (analogvalue[10] < 0.27 && analogvalue[11] < 0.27)			// 侧前方两个探头都没有探到高温，则前进（之后会改成循迹）
+								{
+										firstspeedtemp = -200;									// 较快前进
+										secondspeedtemp = 200;
+										thirdspeedtemp = 200;
+										fourthspeedtemp = -200;
+										runtimes = 0;														// 时间清零 
+								}
+								else if (analogvalue[10] >= 0.27)
+								{
+										leftreassure = 1;
+										normalstate = 0;
+										runtimes = 0;
+								}
+								else if (analogvalue[11] >= 0.27)
+								{
+										rightreassure = 1;
+										normalstate = 0;
+										runtimes = 0;
+								}
+						}
+						else if (leftreassure == 1 || rightreassure == 1)		// 如果左/右检测到异常
+						{
+								runtimes++;
+								if (runtimes < 100)
+								{
+										firstspeedtemp = 100;									// 缓慢前进固定时间，之后停止
+										secondspeedtemp = -100;
+										thirdspeedtemp = -100;
+										fourthspeedtemp = 100;
+								}
+								else 																				// 停止之后，看传感器的值决定进入哪一个状态
+								{
+										runtimes = 100;
+										if (leftreassure == 1)											// 左边
+										{
+												if (analogvalue[12] > 0.28)							// 作为确认，比检测留的阈值要大一些
+												{
+														leftreassure = 0;
+														leftonwork = 1;											// 进入左边工作状态
+														leftturnstate = 1;									// 开始完成左转
+														runtimes = 0;
+												}
+												else																		// 没有得到确认，回到正常巡检状态
+												{
+														normalstate = 1;
+														leftreassure = 0;
+												}
+										}
+										else if (rightreassure == 1)								// 右边
+										{
+												if (analogvalue[13] > 0.28)							// 作为确认，比检测留的阈值要大一些
+												{
+														rightreassure = 0;
+														rightonwork = 1;										// 进入右边工作状态
+														rightturnstate = 1;									// 开始完成右转
+														runtimes = 0;
+												}
+												else																		// 没有得到确认，回到正常巡检状态
+												{
+														normalstate = 1;
+														rightreassure = 0;
+												}
+										}
+								}					
+						}
+						else if (leftonwork == 1 || rightonwork == 1)				// 左边/右边工作状态
+						{
+								if (leftturnstate == 0 && rightturnstate == 0)		// 是否完成左转/右转？完成后进入下面部分
+								{
+										if (runtimes > 0 && runtimes <= 20)						// 调整工作时间
+										{
+												// 驱动执行机构
+										}										
+										runtimes++;
+										if (runtimes > 100)														// 确认传感器的值低于阈值,进行相应左右转，并回到正常状态
+										{
+												if (analogvalue[14] < 0.27)				// 一段时间后检测确认传感器的值是否低于阈值
+												{
+														if (leftonwork == 1)						// 在左边工作
+														{
+																leftonwork = 0;
+																rightturnstate = 1;					// 触发右转
+														}
+														else if (rightonwork == 1)			// 在右边工作
+														{
+																rightonwork = 0;
+																leftturnstate = 1;					// 触发左转
+														}
+														runtimes = 0;
+														backtonormal = 1;							// 工作后回到正常状态
+												}
+												else															// 灭火没有成功，重新灭火
+												{
+														runtimes = 0;
+												}
+										}		
+								}
+						}
+						
+						if (backtonormal == 1)										// 刚执行完任务，留有时间给温度传感器恢复
+						{
+								runtimes++;
+								if (runtimes < 50)
+								{
+										if (leftturnstate == 1)
+										{
+												firstspeedtemp = 500;							 // 左转
+												secondspeedtemp = 500;
+												thirdspeedtemp = 500;
+												fourthspeedtemp = 500; 
+										}
+										if (rightturnstate == 1)
+										{
+												firstspeedtemp = -500;							 // 右转
+												secondspeedtemp = -500;
+												thirdspeedtemp = -500;
+												fourthspeedtemp = -500; 
+										}
+								}
+								else if (runtimes >= 50 && runtimes <= 150)									// 这段时间内只前进（循迹），不管传感器									{
+								{
+										firstspeedtemp = -200;									// 较快前进
+										secondspeedtemp = 200;
+										thirdspeedtemp = 200;
+										fourthspeedtemp = -200;
+								}
+								else if (runtimes > 150)
+								{
+										normalstate = 1;
+										leftturnstate = 0;
+										rightturnstate = 0;
+										backtonormal = 0;
+										runtimes = 0;
+								}
+						}
+						else if (leftturnstate == 1)										// 左转状态
+						{
+								runtimes ++;
+								if (runtimes < 50)
+								{
+										firstspeedtemp = 500;							 // 左转
+										secondspeedtemp = 500;
+										thirdspeedtemp = 500;
+										fourthspeedtemp = 500; 
+								}
+								else
+								{
+										leftturnstate = 0;								// 在既定时间内以既定速度左转，左转了既定角度
+										runtimes = 0;
+								}
+						}
+						else if (rightturnstate == 1)									// 右转状态
+						{
+								runtimes ++;
+								if (runtimes < 50)
+								{
+										firstspeedtemp = -500;							 // 右转
+										secondspeedtemp = -500;
+										thirdspeedtemp = -500;
+										fourthspeedtemp = -500; 
+								}
+								else
+								{
+										rightturnstate = 0;								// 在既定时间内以既定速度右转，右转了既定角度
+										runtimes = 0;
+								}
+						}
+						
+				}
+				*/
+				
+				
+				/*
+				//测试使用，目标追踪，麦克纳姆轮
+				if (runflag)
+        {
+						if (infrareddistance[0] <= 200	||			// 目标较近
+										infrareddistance[1] <= 200 || infrareddistance[2] <= 150
+										|| infrareddistance[3] <= 150)		
+						{
+								firstspeedtemp = 0;											// 停止
+                secondspeedtemp = 0;
+                thirdspeedtemp = 0;
+                fourthspeedtemp = 0; 
+								
+//								if (counttime < 50)
+//								{
+//										counttime++;
+//								}
+//								else
+//							{
+//									if (infrareddistance[0] > preinfrareddistance[0] + 50)				//物体在左方移动
+//										{
+//												firstspeedtemp = 800;							 // 左转
+//												secondspeedtemp = 800;
+//												thirdspeedtemp = 800;
+//												fourthspeedtemp = 800;  
+//										}
+//										else if (infrareddistance[3] > preinfrareddistance[3] + 50)				//物体在右方移动
+//										{
+//												firstspeedtemp = -800;							 // 右转
+//												secondspeedtemp = -800;
+//												thirdspeedtemp = -800;
+//												fourthspeedtemp = -800;  
+//										}
+//										preinfrareddistance[0] = infrareddistance[0];
+//										preinfrareddistance[1] = infrareddistance[1];
+//										preinfrareddistance[2] = infrareddistance[2];
+//										preinfrareddistance[3] = infrareddistance[3];
+//										counttime = 0;
+//								}
+								
+							}
+						else
+						{
+								if (infrareddistance[1] >= 400 && infrareddistance[2] >= 400 				// 目标在前方较远
+										&& infrareddistance[0] >= infrareddistance[1] 
+										&& infrareddistance[3] >= infrareddistance[2]
+										&& infrareddistance[2] >= infrareddistance[1] - 200 
+										&& infrareddistance[1] >= infrareddistance[2] - 200)		// 两边更远
+								{
+										firstspeedtemp = -2000;									// 较快前进
+										secondspeedtemp = 2000;
+										thirdspeedtemp = 2000;
+										fourthspeedtemp = -2000;
+								}
+								else if (infrareddistance[1] >= 200 && infrareddistance[2] >= 200 				// 目标在前方较近
+												&& infrareddistance[0] >= infrareddistance[1] 
+										&& infrareddistance[3] >= infrareddistance[2]
+										&& infrareddistance[2] >= infrareddistance[1] - 200 
+										&& infrareddistance[1] >= infrareddistance[2] - 200)		// 两边更远
+								{
+										firstspeedtemp = -800;									// 较慢前进
+										secondspeedtemp = 800;
+										thirdspeedtemp = 800;
+										fourthspeedtemp = -800;
+								}
+								else if (infrareddistance[0] < infrareddistance[1] 
+												|| infrareddistance[1] < infrareddistance[2] - 200 
+												|| infrareddistance[4] < infrareddistance[1] - 50)												// 目标在左边
+								{
+										firstspeedtemp = 1000;							 // 左转
+										secondspeedtemp = 1000;
+										thirdspeedtemp = 1000;
+										fourthspeedtemp = 1000;  
+								}
+								else if (infrareddistance[3] < infrareddistance[2] 
+												|| infrareddistance[2] < infrareddistance[1] - 200
+												|| infrareddistance[5] < infrareddistance[2] - 50)												// 目标在右边
+								{
+										firstspeedtemp = -1000;							 // 右转
+										secondspeedtemp = -1000;
+										thirdspeedtemp = -1000;
+										fourthspeedtemp = -1000;  
+								}			
+						}
+        }
+				*/
+				
         /*
         // 避障测试程序，仅使用前4个红外测距传感器，适用于麦克纳姆轮和普通论
         if (runflag)
@@ -584,10 +896,14 @@ void Wp_Sev_TimerPro(void)
                     thirdspeedtemp = -1000;
                     fourthspeedtemp = -1000;                    
                 }
-								firstspeedtemp = -1300;         // 原地旋转
-                secondspeedtemp = -700;
-                thirdspeedtemp = -1200;
-                fourthspeedtemp = 500;
+								//firstspeedtemp = -1300;         // 原地旋转
+                //secondspeedtemp = -700;
+               //thirdspeedtemp = -1200;
+                //fourthspeedtemp = 500;
+								firstspeedtemp = -1000;						// 右转
+                secondspeedtemp = -1000;
+                thirdspeedtemp = -1000;
+                fourthspeedtemp = -1000; 
             }
             else if (infrareddistance[2] <= 250)        // 3号红外传感器
             {
@@ -602,10 +918,14 @@ void Wp_Sev_TimerPro(void)
                     thirdspeedtemp = 1000;
                     fourthspeedtemp = 1000;                   
                 }
-								firstspeedtemp = 700;         // 原地旋转
-                secondspeedtemp = 1300;
-                thirdspeedtemp = -500;
-                fourthspeedtemp = 1200;
+								//firstspeedtemp = 700;         // 原地旋转
+                //secondspeedtemp = 1300;
+                //thirdspeedtemp = -500;
+                //fourthspeedtemp = 1200;
+								firstspeedtemp = 1000;					// 左转
+                secondspeedtemp = 1000;
+                thirdspeedtemp = 1000;
+                fourthspeedtemp = 1000;
             }
             else if (infrareddistance[0] <= 250)        // 右转
             {
@@ -623,8 +943,9 @@ void Wp_Sev_TimerPro(void)
             }
         }
         */
+				
 				/*
-				 // 循迹程序，仅使用中间4个灰度传感器，适用于麦克纳姆轮和普通论
+				 // 测试使用，循迹程序，仅使用中间4个灰度传感器，适用于麦克纳姆轮和普通轮
         if (runflag)
         {
             if (luxvalue[1] <= 250 && luxvalue[2] <= 250)
@@ -696,53 +1017,93 @@ void Wp_Sev_TimerPro(void)
 				}
 				*/
 				
+				/*
 				//测试使用，模拟输入对于前进的控制
-//				if (runflag)
-//				{
-//						if (analogvalue[14] >= 3)
-//						{
-//								firstspeedtemp = -1000;                 // 前进
-//								secondspeedtemp = 1000;
-//								thirdspeedtemp = 1000;
-//								fourthspeedtemp = -1000;
-//						}
-//				}
-				//测试蓝牙指令
 				if (runflag)
+				{
+						if (analogvalue[14] >= 3)
+						{
+								firstspeedtemp = -1000;                 // 前进
+								secondspeedtemp = 1000;
+								thirdspeedtemp = 1000;
+								fourthspeedtemp = -1000;
+						}
+				}
+				*/
+				
+				/*
+				 // 循迹程序，仅使用中间4个灰度传感器，适用于麦克纳姆轮和普通轮
+        if (runflag)
         {
-            //runtimes++;
-            
-            // 四轮平台麦克纳姆轮
-					
-            if (UART2_data == 0x01)
+            if (luxvalue[1] <= 250 && luxvalue[2] <= 250)
             {
-                firstspeedtemp = -100;         // 前进
-                secondspeedtemp = 100;
-                thirdspeedtemp = 100;
-                fourthspeedtemp = -100;
+                firstspeedtemp = -500;                 // 前进
+                secondspeedtemp = 500;
+                thirdspeedtemp = 500;
+                fourthspeedtemp = -500;
+								if (luxvalue[0] <= 250 && luxvalue[3] >= 200)		//标记急转弯前一时刻状态，a = 0代表左边有道轨道
+								{
+										preState = 0;
+								}
+								if (luxvalue[0] >= 200 && luxvalue[2] <= 250)
+								{
+										preState = 1;
+								}
             }
-            else if(UART2_data == 0x02)
+            else        // 脱离轨道
             {
-                firstspeedtemp = 100;          // 后退
-                secondspeedtemp = -100;
-                thirdspeedtemp = -100;
-                fourthspeedtemp = 100;          
-            }
-            else if(UART2_data == 0x03)
-            {
-                firstspeedtemp = 100;          // 左平移
-                secondspeedtemp = 100;
-                thirdspeedtemp = -100;
-                fourthspeedtemp = -100;
-            }
-            else if(UART2_data == 0x04)
-            {
-                firstspeedtemp = -100;         // 右平移
-                secondspeedtemp = -100;
-                thirdspeedtemp = 100;
-                fourthspeedtemp = 100;
-            }
-					}
+                firstspeedtemp = 0;
+                secondspeedtemp = 0;
+                thirdspeedtemp = 0;
+                fourthspeedtemp = 0;
+							
+								if (luxvalue[1] <= 200 && luxvalue[2] >= 250) 		//向右微偏出，需要向左微调
+								{
+										firstspeedtemp = 300;
+										secondspeedtemp = 300;
+										thirdspeedtemp = 300;
+										fourthspeedtemp = 300;
+								}
+								else if (luxvalue[2] <= 200 && luxvalue[1] >= 250) 		//向左微偏出，需要向右微调
+								{
+										firstspeedtemp = -300;
+										secondspeedtemp = -300;
+										thirdspeedtemp = -300;
+										fourthspeedtemp = -300;
+								}
+								else if (luxvalue[0] <= 200) 		//向右偏出，需要向左调
+								{
+										firstspeedtemp = 350;         // 原地旋转
+										secondspeedtemp = 350;
+										thirdspeedtemp = 350;
+										fourthspeedtemp = 350;
+								}
+								else if (luxvalue[3] <= 200) 		//向左偏出，需要向右调
+								{
+										firstspeedtemp = -350;         // 原地旋转
+										secondspeedtemp = -350;
+										thirdspeedtemp = -350;
+										fourthspeedtemp = -350;
+								}
+								//出现无法探测到轨道的情况，需要利用前一时刻的信息，进行旋转
+								else if (preState == 0)								//左边有轨道，向左旋转
+								{
+										firstspeedtemp = 350;         // 原地旋转
+										secondspeedtemp = 350;
+										thirdspeedtemp = 350;
+										fourthspeedtemp = 350;
+								}
+								else 							//右边有轨道，向右旋转
+								{
+										firstspeedtemp = -350;         // 原地旋转
+										secondspeedtemp = -350;
+										thirdspeedtemp = -350;
+										fourthspeedtemp = -350;
+								}
+						}
+				}
+				*/
+				
         /*
         // 测试使用，原地运动，前进，后退，左平移，右平移
         if (runflag)
@@ -820,11 +1181,13 @@ void Wp_Sev_TimerPro(void)
                 fourthspeedtemp = 1200;
             }
 						
-            else if(runtimes > 200)
+						
+            if(runtimes > 200)
             {
                 runtimes = 0;
             }
             
+						
             // 三轮全向平台
             
             if (runtimes > 0 && runtimes <= 50)
