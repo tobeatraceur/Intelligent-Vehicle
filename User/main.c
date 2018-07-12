@@ -1,0 +1,1163 @@
+/********************************************Copyright******************************************************
+**                                                                                                      
+**
+**-------------------------------------------文件信息-------------------------------------------------------
+** 文件名称:			main.c
+** 最后修订日期:  		2012-10-10
+** 最后版本:			1.0
+** 描述:				移动小底盘控制器系统主函数;
+**
+**-----------------------------------------------------------------------------------------------------------
+** 创建人:				吴康
+** 创建日期:			2012-02-09
+** 版本:				1.0
+** 描述:				移动小底盘控制器系统主函数;
+**
+**-----------------------------------------------------------------------------------------------------------
+** 修订人:
+** 修订日期:
+** 版本:
+** 描述:
+**
+**-----------------------------------------------------------------------------------------------------------
+** 修订人:
+** 修订日期:
+** 版本:
+** 描述:
+**
+*************************************************************************************************************/
+#include "Wp_Sys.h"
+
+
+/*************************************************************************************************************
+** 函数名称:			main
+**
+** 函数描述:			系统主函数;
+** 						
+**					    
+** 输入变量:			void;
+** 返回值:				int;
+**
+** 使用宏或常量:		None;
+** 使用全局变量:		None;
+**
+** 调用函数:			None;
+**
+** 创建人:				
+** 创建日期:			2011-11-1
+**-------------------------------------------------------------------------------------------------------------
+** 修订人:
+** 修订日期:
+**-------------------------------------------------------------------------------------------------------------
+***************************************************************************************************************/
+int main(void)
+{
+    uint8 i = 0;
+    uint8 j = 0;
+    uint8 k = 0;
+    uint8 h = 0;
+    
+    u8 n = 0;
+    
+	float pitch = 0.0;          // 姿态缓存
+	float roll = 0.0;
+	float yaw = 0.0;
+    
+//  u16 distance = 0;           // 距离缓存
+//  u16 lux = 0;                // Lux缓存
+    
+    
+	/*	计时器(Timer3)及其中断的初始化（必须放在系统初始化函数的前面）	*/
+//	Wp_UserTimerEnableIT(TIMER_CHANNEL0, 1000000);	// 使能计时器0，计时时间1s
+//	Wp_UserTimerEnableIT(TIMER_CHANNEL2, 1000);	    // 使能计时器2，计时时间1ms
+//	Wp_UserTimerSetHadler(TimerHadler);			    // 传递计时器中断入口函数指针
+	
+    /*	串口1~3中断的初始化（必须放在系统初始化函数的前面）	*/
+	Wp_SetUART1Hadler(ReceiveUart1Hadler);		    // UART1中断入口函数
+	Wp_SetUART2Hadler(ReceiveUart2Hadler);		    // UART2中断入口函数
+	Wp_SetUART3Hadler(ReceiveUart3Hadler);		    // UART3中断入口函数
+	
+	Wp_SystemConfigure();						    // 系统初始化
+	
+	while(1)
+	{
+     // keyvalue = 5;                                                   // 显示当前界面
+
+        switch(keyvalue)
+        {
+            case 1:                                                     // 显示姿态信息
+                    k++;
+                    if (k == 1)
+                    {
+                        Wp_ClearOled();                                 // 清屏
+                    }
+                    if (k > 100)
+                    {
+                        k = 2;
+                    }
+                    j = 0;
+                    h = 0;
+                    i = 0;
+                    
+                    pitch = wp_dmp_data.Pitch;				            // 显示俯仰角
+                    if (wp_dmp_data.Pitch >= 0)
+                    {
+                        OLED_P8x16Str(0, 1, "P:+");
+                        Wp_Disfloat(3, 1, pitch, 2);
+                    }
+                    else
+                    {
+                        OLED_P8x16Str(0, 1, "P:-");
+                        pitch = -pitch;
+                        Wp_Disfloat(3, 1, pitch, 2);
+                    }
+                    roll = wp_dmp_data.Roll;				            // 显示滚转角
+                    if (roll >= 0)
+                    {
+                        OLED_P8x16Str(0, 2, "R:+");
+                        Wp_Disfloat(3, 2, roll, 2);
+                    }
+                    else
+                    {
+                        OLED_P8x16Str(0, 2, "R:-");
+                        roll = -roll;
+                        Wp_Disfloat(3, 2, roll, 2);
+                    }
+                    yaw = wp_dmp_data.Yaw;					            // 显示偏航角
+                    if (yaw >= 0)
+                    {
+                        OLED_P8x16Str(0, 3, "Y:+");
+                        Wp_Disfloat(3, 3, yaw, 2);
+                    }
+                    else
+                    {
+                        OLED_P8x16Str(0, 3, "Y:-");
+                        yaw = -yaw;
+                        Wp_Disfloat(3, 3, yaw, 2);
+                    }
+                    
+                    OLED_P8x16Char(15, 1, 'V');                         // 显示电源电压
+                    Wp_DisfloatIntegerandDecimal(11, 1, powervalue, 2, 1);
+                    Wp_DisP16x16DotArray(2, 0, 0);                      // 显示“姿态信息”
+                    Wp_DisP16x16DotArray(3, 0, 1);
+                    Wp_DisP16x16DotArray(4, 0, 2);
+                    Wp_DisP16x16DotArray(5, 0, 3);
+                    
+                    // 测试光通量值
+                //  Wp_DisfloatIntegerandDecimal(11, 2, analogvalue[10]-0.99, 1, 3);
+                //  lux = ((analogvalue[10]-0.99) * 10000) / 180;       // 测试使用，计算Lux
+                //  Wp_DisfloatIntegerandDecimal(11, 3, lux, 3, 1);
+                //  lux = Wp_CalculateLuxChannel(11);                   // 测试使用，计算Lux
+                //  Wp_DisIntNum(11, 3, lux, 5);
+                    
+                    // 测试红外传感器距离值
+                //  Wp_DisfloatIntegerandDecimal(11, 3, analogvalue[11], 1, 3);
+                //  distance = Wp_CalculateDistanceChannel(12);
+                //  Wp_DisIntNum(11, 2, distance, 3);
+                    
+                /*  Wp_DisfloatIntegerandDecimal(11, 3, analogvalue[0], 1, 3);
+                    Wp_DisIntNum(11, 2, infrareddistance[0], 3);
+                    // 计算红外传感器测量距离值
+                    for (n = 0; n < 12; n++)
+                    {
+                        infrareddistance[n] = Wp_CalculateDistanceChannel(n+1);
+                    }
+                */
+                    
+                break;
+                
+            case 2:                                                     // 显示输入GPIO值
+                    j++;
+                    if (j == 1)
+                    {
+                        Wp_ClearOled();                                 // 清屏
+                    }
+                    if (j > 100)
+                    {
+                        j = 2;
+                    }
+                    k = 0;
+                    h = 0;
+                    i = 0;
+                    
+                    printf("  Input Value\n");		                    // 用printf显示一串字符
+                //  OLED_P8x16Str(2, 0, "Input Value");
+                    OLED_Dis8x16CharNum(0, 1, 1);
+                    OLED_Dis8x16CharNum(4, 1, 2);
+                    OLED_Dis8x16CharNum(8, 1, 3);
+                    OLED_Dis8x16CharNum(12, 1, 4);
+                    OLED_Dis8x16CharNum(0, 2, gpioinputvalue & 0x01);
+                    OLED_Dis8x16CharNum(4, 2, (gpioinputvalue & 0x02) >> 1);
+                    OLED_Dis8x16CharNum(8, 2, (gpioinputvalue & 0x04) >> 2);
+                    OLED_Dis8x16CharNum(12, 2, (gpioinputvalue & 0x08) >> 3);
+                    
+                break;
+                
+            case 3:                                                     // 显示输出GPIO值
+                    i++;
+                    if (i == 1)
+                    {
+                        Wp_ClearOled();                                 // 清屏
+                    }
+                    if (i > 100)
+                    {
+                        i = 2;
+                    }
+                    j = 0;
+                    k = 0;
+                    h = 0;
+                    
+                    printf("  Output Value\n");		                    // 用printf显示一串字符
+                //  OLED_P8x16Str(2, 0, "Output Value"); 
+                    OLED_Dis6x8CharNum(0, 2, 1);
+                    OLED_Dis6x8CharNum(5, 2, 2);
+                    OLED_Dis6x8CharNum(11, 2, 3);
+                    OLED_Dis6x8CharNum(16, 2, 4);
+                    OLED_Dis6x8CharNum(0, 3, 5);
+                    OLED_Dis6x8CharNum(5, 3, 6);
+                    OLED_Dis6x8CharNum(11, 3, 7);
+                    OLED_Dis6x8CharNum(16, 3, 8);
+                    
+                    OLED_Dis8x16CharNum(0, 2, gpiooutputvalue & 0x01);
+                    OLED_Dis8x16CharNum(4, 2, (gpiooutputvalue & 0x02) >> 1);
+                    OLED_Dis8x16CharNum(8, 2, (gpiooutputvalue & 0x04) >> 2);
+                    OLED_Dis8x16CharNum(12, 2, (gpiooutputvalue & 0x08) >> 3);
+                    OLED_Dis8x16CharNum(0, 3, (gpiooutputvalue & 0x10) >> 4);
+                    OLED_Dis8x16CharNum(4, 3, (gpiooutputvalue & 0x20) >> 5);
+                    OLED_Dis8x16CharNum(8, 3, (gpiooutputvalue & 0x40) >> 6);
+                    OLED_Dis8x16CharNum(12, 3, (gpiooutputvalue & 0x80) >> 7);
+                    
+                break;
+                    
+            case 4:                                                     // 显示各模拟通道电压值
+                    h++;
+                    if (h == 1)
+                    {
+                        Wp_ClearOled();                                 // 清屏
+                    }
+                    if (h > 100)
+                    {
+                        h = 2;           
+                    }
+                    j = 0;
+                    k = 0;
+                    i = 0;
+                    
+                    Wp_DisfloatIntegerandDecimal(0, 0, powervalue, 2, 1);               // 电源电压
+                    Wp_DisfloatIntegerandDecimal(4, 0, analogvalue[0], 1, 1);           // 模拟1~15通道电压
+                    Wp_DisfloatIntegerandDecimal(8, 0, analogvalue[1], 1, 1);
+                    Wp_DisfloatIntegerandDecimal(12, 0, analogvalue[2], 1, 1);
+                    
+                    Wp_DisfloatIntegerandDecimal(0, 1, analogvalue[3], 1, 1);
+                    Wp_DisfloatIntegerandDecimal(4, 1, analogvalue[4], 1, 1);
+                    Wp_DisfloatIntegerandDecimal(8, 1, analogvalue[5], 1, 1);
+                    Wp_DisfloatIntegerandDecimal(12, 1, analogvalue[6], 1, 1);
+                    
+                    Wp_DisfloatIntegerandDecimal(0, 2, analogvalue[7], 1, 1);
+                    Wp_DisfloatIntegerandDecimal(4, 2, analogvalue[8], 1, 1);
+                    Wp_DisfloatIntegerandDecimal(8, 2, analogvalue[9], 1, 1);
+                    Wp_DisfloatIntegerandDecimal(12, 2, analogvalue[10], 1, 1);
+                    
+                    Wp_DisfloatIntegerandDecimal(0, 3, analogvalue[11], 1, 1);
+                    Wp_DisfloatIntegerandDecimal(4, 3, analogvalue[12], 1, 1);
+                    Wp_DisfloatIntegerandDecimal(8, 3, analogvalue[13], 1, 1);
+                    Wp_DisfloatIntegerandDecimal(12, 3, analogvalue[14], 1, 1);
+                    
+                break;
+                    
+            case 5:
+                    Wp_DisIntNum(0, 2, infrareddistance[0], 3);
+                    Wp_DisIntNum(4, 2, infrareddistance[1], 3);
+                    Wp_DisIntNum(8, 2, infrareddistance[2], 3);
+                    Wp_DisIntNum(12, 2, infrareddistance[3], 3);
+                    Wp_DisIntNum(0, 3, infrareddistance[4], 3);
+                    Wp_DisIntNum(4, 3, infrareddistance[5], 3);
+                    Wp_DisIntNum(8, 3, infrareddistance[6], 3);
+                    Wp_DisIntNum(12, 3, infrareddistance[7], 3);
+                    
+                    printf("InfraredDistancs\n");
+                    OLED_P8x16Str(4, 1, "Unit:mm");
+                    
+                    // 计算红外传感器测量距离值
+                    for (n = 0; n < 12; n++)
+                    {
+                        infrareddistance[n] = Wp_CalculateDistanceChannel(n+1);
+                    }
+                    
+                break;
+                    
+            case 6:
+                    Wp_DisIntNum(1, 2, luxvalue[0], 4);
+                    Wp_DisIntNum(6, 2, luxvalue[1], 4);
+                    Wp_DisIntNum(11, 2, luxvalue[2], 4);
+                    Wp_DisIntNum(1, 3, luxvalue[3], 4);
+                    Wp_DisIntNum(6, 3, luxvalue[4], 4);
+                    Wp_DisIntNum(11, 3, luxvalue[5], 4);
+                    
+                    printf("  GrayscaleLux\n");
+                    OLED_P8x16Str(2, 1, "Unit:10mLux");
+                    
+                    // 计算灰度传感器光通量值
+                    for (n = 0; n < 6; n++)
+                    {
+                        luxvalue[n] = Wp_CalculateLuxChannel(9+n);       // 测试使用，计算Lux
+                    }
+
+                break;
+										
+						case 7:                                                     // 测试温度传感器
+										j++;
+                    if (j == 1)
+                    {
+                        Wp_ClearOled();                                 // 清屏
+                    }
+                    if (j == 2)
+                    {
+                        j = 1;
+                    }
+                    k = 0;
+                    h = 0;
+                    i = 0;
+                   
+                    
+//                    Wp_DisfloatIntegerandDecimal(0, 0, powervalue, 2, 1);               // 电源电压
+//                    Wp_DisfloatIntegerandDecimal(4, 0, analogvalue[0], 1, 1);           // 模拟1~15通道电压
+//                    Wp_DisfloatIntegerandDecimal(8, 0, analogvalue[1], 1, 1);
+//                    Wp_DisfloatIntegerandDecimal(12, 0, analogvalue[2], 1, 1);
+//                    
+//                    Wp_DisfloatIntegerandDecimal(0, 1, analogvalue[3], 1, 1);
+//                    Wp_DisfloatIntegerandDecimal(4, 1, analogvalue[4], 1, 1);
+//                    Wp_DisfloatIntegerandDecimal(8, 1, analogvalue[5], 1, 1);
+//                    Wp_DisfloatIntegerandDecimal(12, 1, analogvalue[6], 1, 1);
+//                    
+//                    Wp_DisfloatIntegerandDecimal(0, 2, analogvalue[7], 1, 1);
+//                    Wp_DisfloatIntegerandDecimal(4, 2, analogvalue[8], 1, 1);
+//                    Wp_DisfloatIntegerandDecimal(8, 2, analogvalue[9], 1, 1);
+//                    Wp_DisfloatIntegerandDecimal(12, 2, analogvalue[10], 1, 1);
+//                    
+//                    Wp_DisfloatIntegerandDecimal(0, 3, analogvalue[11], 1, 1);
+											Wp_DisfloatIntegerandDecimal(4, 2, analogvalue[12], 1, 4);
+											Wp_DisfloatIntegerandDecimal(8, 3, analogvalue[13], 1, 4);
+//                    Wp_DisfloatIntegerandDecimal(12, 3, analogvalue[14], 1, 1);
+                    
+                break;
+                    
+            default:
+                break;
+        }
+        
+		Wp_DelayMs(10);                                                 // 延时函数
+	}
+}
+
+
+/*************************************************************************************************************
+** 函数名称:			Wp_Sev_TimerPro
+**
+** 函数描述:			50ms伺服中断函数;
+** 						
+**					    
+** 输入变量:			void;
+** 返回值:				void;
+**
+** 使用宏或常量:		None;
+** 使用全局变量:		None;
+**
+** 调用函数:			None;
+**
+** 创建人:				
+** 创建日期:			2011-11-1
+**-------------------------------------------------------------------------------------------------------------
+** 修订人:
+** 修订日期:
+**-------------------------------------------------------------------------------------------------------------
+***************************************************************************************************************/
+void Wp_Sev_TimerPro(void)
+{	
+		int preState = 0;												//轨道循迹时使用，用来记录前一时刻轨道信息，a = 0代表左边有轨道
+	static u8 i = 0;                    // LED1闪烁
+    static u16 j = 0;                   // LED2闪烁
+    static u8 k = 0;                    // 刷新按键使用
+	static u8 h = 0;                    // 读取姿态信息使用
+    static u8 n = 0;
+	//以下两个测试串口
+	uint8_t count = 0;
+	uint8_t check_sum = 0;
+	
+//  static u16 m = 0;
+    
+    static u8 runflag = 0;              // 运行标志
+    
+    static u8 floatleddismode = 0;      // 流水灯显示模式
+    u8 result = 0;
+//  static u8 receiveresult = 0;        // 成功解析一帧上位机协议标志，在发送完执行指令后清零
+    
+    u16 temph = 0;                      // 临时转换变量
+    u16 templ = 0;
+    
+    long firstspeedtemp = 0;            // 四个电机模块的速度缓存
+    long secondspeedtemp = 0;
+    long thirdspeedtemp = 0;
+    long fourthspeedtemp = 0;
+    
+    u8 firstsendok = 0;                 // 成功发送标志
+    u8 secondsendok = 0;    
+    u8 thirdsendok = 0;    
+    u8 fourthsendok = 0;
+
+    static u16 runtimes = 0;            // 运行时间计数器，调试DEMO使用
+    
+    
+	if (TIM_GetITStatus(TIM2, TIM_IT_CC1) != RESET)
+	{
+		TIM_ClearITPendingBit(TIM2, TIM_IT_CC1);
+	}
+	else if (TIM_GetITStatus(TIM2, TIM_IT_Update) != RESET)
+	{
+		TIM_ClearITPendingBit(TIM2, TIM_IT_Update);
+		
+        
+		if (++i >= 10)										        // 板载LED频闪
+		{
+			i = 0;
+            
+            LED2_TOGGLE;
+            
+        //  Wp_FlowLights(floatleddismode);                         // 流水灯函数
+		}
+        if (++j >= 2)                                               // 接口面板LED频闪
+        {
+            j = 0;
+            
+            LED1_TOGGLE;
+        }
+        
+        if (++k >= 1)                                               // 检测按键是否按下
+        {
+            k = 0;
+            
+            /*  刷新按键状态，用户切换屏幕使用      */
+            Wp_KeyRefreshState(&key_up);                            // 刷新按键状态
+            if (Wp_KeyAccessTimes(&key_up, KEY_ACCESS_READ) != 0)
+            {
+                Wp_KeyAccessTimes(&key_up, KEY_ACCESS_REFRESH);
+                
+							//Wp_Usart2_SendInt(3);
+							  //Wp_Usart2_SendChar(0x55);
+							
+							
+	
+//	Wp_Usart2_SendChar(0x55);													                // 开始位1、2
+//	Wp_Usart2_SendChar(0xAA);
+//	Wp_Usart2_SendChar(0xFE);												// 设备ID
+//    Wp_Usart2_SendChar(0x01);	                                        // 控制字
+//	Wp_Usart2_SendChar(0x00);										// 参数长度
+//	
+//	for(count = 0; count < 3; count++)
+//	{
+//		Wp_Usart2_SendChar(0x11);										// 写数据组
+//	}
+//	
+//	check_sum = 0x55;
+//	check_sum += 0xAA;
+//	check_sum += 0xFE;
+//	check_sum += 0x01;
+//	check_sum += 0x00;
+//    
+//	for(count = 0; count < 3; count++)
+//	{
+//		check_sum += 0x11;											    // 校验和计算
+//	}
+//    
+//	Wp_Usart2_SendChar(check_sum);                                                              // 发送数据
+//    Wp_Usart2_SendChar(check_sum);                                                              // 需要发送两遍校验和，使用SN65HVD75，首次出现此问题
+							Wp_Usart2_SendChar(UART2_data);
+                keyvalue++;                                         // 切换屏幕状态
+                if (keyvalue >= 8)
+                {
+                    keyvalue = 1;
+                }
+            }
+            /*  刷新按键状态，用户切换屏幕使用      */
+            Wp_KeyRefreshState(&key_down);                          // 刷新按键状态
+            if (Wp_KeyAccessTimes(&key_down, KEY_ACCESS_READ) != 0)
+            {
+                Wp_KeyAccessTimes(&key_down, KEY_ACCESS_REFRESH);
+                
+							//Wp_Usart2_SendInt(4);
+							//USART_SendData(USART2, 1);
+							
+                keyvalue--;                                         // 切换屏幕状态
+                if (keyvalue <= 0)
+                {
+                    keyvalue = 6;
+                }
+            }
+            /*  刷新按键状态，用户切换屏幕使用      */
+            Wp_KeyRefreshState(&key_back);                          // 刷新按键状态
+            if (Wp_KeyAccessTimes(&key_back, KEY_ACCESS_READ) != 0)
+            {
+                Wp_KeyAccessTimes(&key_back, KEY_ACCESS_REFRESH);
+                
+                keyvalue = 1;                                       // 切换屏幕状态
+                
+                runflag = 0;                                        // 按下BACK按键运动结束
+                runtimes = 0;                                       // 清时间计数器
+            }
+            /*  刷新按键状态，用户切换屏幕使用      */
+            Wp_KeyRefreshState(&key_ok);                            // 刷新按键状态
+            if (Wp_KeyAccessTimes(&key_ok, KEY_ACCESS_READ) != 0)
+            {
+                Wp_KeyAccessTimes(&key_ok, KEY_ACCESS_REFRESH);
+                
+            //  keyvalue = 1;                                       // 切换屏幕状态
+                
+                floatleddismode++;                                  // 流水灯模式切换
+                if (floatleddismode >= 3)
+                    floatleddismode = 0;
+                
+                runflag = 1;                                        // 按下OK按键运动开始
+            }
+        }
+				
+        if (analogvalue[12] > analogvalue[13]+0.005)
+				{
+						Wp_SetPortOutputValue(1, 1);
+				}
+				 if (analogvalue[13] > analogvalue[12]+0.005)
+				{
+						Wp_SetPortOutputValue(1, 0);
+				}
+        /*
+        // 测试使用，按键按下前进，后退，左转，右转
+        if (key_up())                   // 前进
+        {
+            firstspeedtemp = -3000;
+            secondspeedtemp = 3000;
+            thirdspeedtemp = 3000;
+            fourthspeedtemp = -3000;
+        }
+        else if (key_down())            // 后退
+        {
+            firstspeedtemp = 3000;
+            secondspeedtemp = -3000;
+            thirdspeedtemp = -3000;
+            fourthspeedtemp = 3000;            
+        }
+        else if (key_back())            // 左转
+        {
+            firstspeedtemp = 2000;
+            secondspeedtemp = 2000;
+            thirdspeedtemp = 2000;
+            fourthspeedtemp = 2000;                
+        }
+        else if (key_ok())              // 右转
+        {
+            firstspeedtemp = -2000;
+            secondspeedtemp = -2000;
+            thirdspeedtemp = -2000;
+            fourthspeedtemp = -2000;          
+        }
+        */
+        /*
+        // 避障测试程序，仅使用前4个红外测距传感器，适用于麦克纳姆轮和普通论
+        if (runflag)
+        {
+            if (infrareddistance[1] >= 200 && infrareddistance[2] >= 200 
+                && infrareddistance[0] >= 200 && infrareddistance[3] >= 200)
+            {
+                firstspeedtemp = -1000;                 // 前进
+                secondspeedtemp = 1000;
+                thirdspeedtemp = 1000;
+                fourthspeedtemp = -1000;
+            }
+            else if (infrareddistance[1] <= 250)        // 2号红外传感器
+            {
+                firstspeedtemp = 0;
+                secondspeedtemp = 0;
+                thirdspeedtemp = 0;
+                fourthspeedtemp = 0;
+                if (infrareddistance[2] >= 200)         // 右转
+                {
+                    firstspeedtemp = -1000;
+                    secondspeedtemp = -1000;
+                    thirdspeedtemp = -1000;
+                    fourthspeedtemp = -1000;                    
+                }
+								firstspeedtemp = -1300;         // 原地旋转
+                secondspeedtemp = -700;
+                thirdspeedtemp = -1200;
+                fourthspeedtemp = 500;
+            }
+            else if (infrareddistance[2] <= 250)        // 3号红外传感器
+            {
+                firstspeedtemp = 0;
+                secondspeedtemp = 0;
+                thirdspeedtemp = 0;
+                fourthspeedtemp = 0;	
+                if (infrareddistance[1] >= 200)         // 左转
+                {
+                    firstspeedtemp = 1000;
+                    secondspeedtemp = 1000;
+                    thirdspeedtemp = 1000;
+                    fourthspeedtemp = 1000;                   
+                }
+								firstspeedtemp = 700;         // 原地旋转
+                secondspeedtemp = 1300;
+                thirdspeedtemp = -500;
+                fourthspeedtemp = 1200;
+            }
+            else if (infrareddistance[0] <= 250)        // 右转
+            {
+                firstspeedtemp = -1000;
+                secondspeedtemp = -1000;
+                thirdspeedtemp = -1000;
+                fourthspeedtemp = -1000;
+            }
+            else if (infrareddistance[3] <= 250)        // 左转
+            {
+                firstspeedtemp = 1000;
+                secondspeedtemp = 1000;
+                thirdspeedtemp = 1000;
+                fourthspeedtemp = 1000;
+            }
+        }
+        */
+				/*
+				 // 循迹程序，仅使用中间4个灰度传感器，适用于麦克纳姆轮和普通论
+        if (runflag)
+        {
+            if (luxvalue[1] <= 250 && luxvalue[2] <= 250)
+            {
+                firstspeedtemp = -500;                 // 前进
+                secondspeedtemp = 500;
+                thirdspeedtemp = 500;
+                fourthspeedtemp = -500;
+								if (luxvalue[0] <= 250 && luxvalue[3] >= 200)		//标记急转弯前一时刻状态，a = 0代表左边有道轨道
+								{
+										preState = 0;
+								}
+								if (luxvalue[0] >= 200 && luxvalue[2] <= 250)
+								{
+										preState = 1;
+								}
+            }
+            else        // 脱离轨道
+            {
+                firstspeedtemp = 0;
+                secondspeedtemp = 0;
+                thirdspeedtemp = 0;
+                fourthspeedtemp = 0;
+							
+								if (luxvalue[1] <= 200 && luxvalue[2] >= 250) 		//向右微偏出，需要向左微调
+								{
+										firstspeedtemp = 300;
+										secondspeedtemp = 300;
+										thirdspeedtemp = 300;
+										fourthspeedtemp = 300;
+								}
+								else if (luxvalue[2] <= 200 && luxvalue[1] >= 250) 		//向左微偏出，需要向右微调
+								{
+										firstspeedtemp = -300;
+										secondspeedtemp = -300;
+										thirdspeedtemp = -300;
+										fourthspeedtemp = -300;
+								}
+								else if (luxvalue[0] <= 200) 		//向右偏出，需要向左调
+								{
+										firstspeedtemp = 350;         // 原地旋转
+										secondspeedtemp = 650;
+										thirdspeedtemp = -250;
+										fourthspeedtemp = 600;
+								}
+								else if (luxvalue[3] <= 200) 		//向左偏出，需要向右调
+								{
+										firstspeedtemp = -650;         // 原地旋转
+										secondspeedtemp = -350;
+										thirdspeedtemp = -600;
+										fourthspeedtemp = 250;
+								}
+								//出现无法探测到轨道的情况，需要利用前一时刻的信息，进行旋转
+								else if (preState == 0)								//左边有轨道，向左旋转
+								{
+										firstspeedtemp = 350;         // 原地旋转
+										secondspeedtemp = 750;
+										thirdspeedtemp = -250;
+										fourthspeedtemp = 700;
+								}
+								else 							//右边有轨道，向右旋转
+								{
+										firstspeedtemp = -750;         // 原地旋转
+										secondspeedtemp = -350;
+										thirdspeedtemp = -700;
+										fourthspeedtemp = 250;
+								}
+						}
+				}
+				*/
+				
+				//测试使用，模拟输入对于前进的控制
+//				if (runflag)
+//				{
+//						if (analogvalue[14] >= 3)
+//						{
+//								firstspeedtemp = -1000;                 // 前进
+//								secondspeedtemp = 1000;
+//								thirdspeedtemp = 1000;
+//								fourthspeedtemp = -1000;
+//						}
+//				}
+				//测试蓝牙指令
+				if (runflag)
+        {
+            //runtimes++;
+            
+            // 四轮平台麦克纳姆轮
+					
+            if (UART2_data == 0x01)
+            {
+                firstspeedtemp = -100;         // 前进
+                secondspeedtemp = 100;
+                thirdspeedtemp = 100;
+                fourthspeedtemp = -100;
+            }
+            else if(UART2_data == 0x02)
+            {
+                firstspeedtemp = 100;          // 后退
+                secondspeedtemp = -100;
+                thirdspeedtemp = -100;
+                fourthspeedtemp = 100;          
+            }
+            else if(UART2_data == 0x03)
+            {
+                firstspeedtemp = 100;          // 左平移
+                secondspeedtemp = 100;
+                thirdspeedtemp = -100;
+                fourthspeedtemp = -100;
+            }
+            else if(UART2_data == 0x04)
+            {
+                firstspeedtemp = -100;         // 右平移
+                secondspeedtemp = -100;
+                thirdspeedtemp = 100;
+                fourthspeedtemp = 100;
+            }
+					}
+        /*
+        // 测试使用，原地运动，前进，后退，左平移，右平移
+        if (runflag)
+        {
+            runtimes++;
+            
+            // 四轮平台麦克纳姆轮
+					
+            if (runtimes > 0 && runtimes <= 50)
+            {
+                firstspeedtemp = -1000;         // 前进
+                secondspeedtemp = 1000;
+                thirdspeedtemp = 1000;
+                fourthspeedtemp = -1000;
+            }
+            else if(runtimes > 50 && runtimes <= 100)
+            {
+                firstspeedtemp = 1000;          // 后退
+                secondspeedtemp = -1000;
+                thirdspeedtemp = -1000;
+                fourthspeedtemp = 1000;          
+            }
+            else if(runtimes > 100 && runtimes <= 150)
+            {
+                firstspeedtemp = 1000;          // 左平移
+                secondspeedtemp = 1000;
+                thirdspeedtemp = -1000;
+                fourthspeedtemp = -1000;
+            }
+            else if(runtimes > 150 && runtimes <= 200)
+            {
+                firstspeedtemp = -1000;         // 右平移
+                secondspeedtemp = -1000;
+                thirdspeedtemp = 1000;
+                fourthspeedtemp = 1000;
+            }
+						
+						
+						else if(runtimes > 200 && runtimes <= 250)
+            {
+                firstspeedtemp = 2000;         // 
+                secondspeedtemp = 0;
+                thirdspeedtemp = 500;
+                fourthspeedtemp = 0;
+            }
+						else if(runtimes > 250 && runtimes <= 300)
+            {
+                firstspeedtemp = -1300;         // 
+                secondspeedtemp = -150;
+                thirdspeedtemp = 0;
+                fourthspeedtemp = 1000;
+            }
+						
+						//测试原地旋转
+						
+						if(runtimes > 0 && runtimes <= 200)
+            {
+                firstspeedtemp = -300;         // 
+                secondspeedtemp = -1500;
+                thirdspeedtemp = 300;
+                fourthspeedtemp = -1500;
+            }
+						else if(runtimes > 200 && runtimes <= 400)
+            {
+                firstspeedtemp = 700;         // 
+                secondspeedtemp = 1300;
+                thirdspeedtemp = -700;
+                fourthspeedtemp = 1300;
+            }
+							else if(runtimes > 400 && runtimes <= 600)
+            {
+                firstspeedtemp = 700;         // 最终成功原地旋转
+                secondspeedtemp = 1300;
+                thirdspeedtemp = -500;
+                fourthspeedtemp = 1200;
+            }
+						
+            else if(runtimes > 200)
+            {
+                runtimes = 0;
+            }
+            
+            // 三轮全向平台
+            
+            if (runtimes > 0 && runtimes <= 50)
+            {
+                firstspeedtemp = -1000;         // 前进
+                secondspeedtemp = 1000;
+                thirdspeedtemp = 0;             
+            }
+            else if (runtimes > 50 && runtimes <= 100)
+            {
+                firstspeedtemp = 1000;          // 后退
+                secondspeedtemp = -1000;
+                thirdspeedtemp = 0;             
+            }
+            else if (runtimes > 100 && runtimes <= 150)
+            {
+                firstspeedtemp = 1000;          // 原地左旋转
+                secondspeedtemp = 1000;
+                thirdspeedtemp = 1000;  
+            }
+            else if (runtimes > 150 && runtimes <= 200)
+            {
+                firstspeedtemp = -1000;         // 原地右旋转
+                secondspeedtemp = -1000;
+                thirdspeedtemp = -1000;  
+            }
+            else if (runtimes > 200 && runtimes <= 300)
+            {
+                VectorMove(90, 2000, 0);       // 90度左平移
+                firstspeedtemp = motorspeedbuffer[0];
+                secondspeedtemp = motorspeedbuffer[1];
+                thirdspeedtemp = motorspeedbuffer[2];
+            }
+            else if (runtimes > 300 && runtimes <= 400)
+            {
+                VectorMove(-90, 2000, 0);      // -90度右平移
+                firstspeedtemp = motorspeedbuffer[0];
+                secondspeedtemp = motorspeedbuffer[1];
+                thirdspeedtemp = motorspeedbuffer[2];
+            }
+            else if (runtimes > 400)
+            {
+                runtimes = 0;
+            }
+            
+        }
+        */
+        
+        if (++n >= 1)
+        {
+            n = 0;
+            
+            //  解析上位机指令，并回复上位机各关节状态
+            //result = UpRobotSlaveRxPacket(&str_rx_buffer, &str_cmd);	        // 解析上位机发送数据帧
+            if (result)
+            {
+                result = 0;
+                
+                /*  保存参数    */
+                for (h = 0; h < 4; h++)                                         // 保存速度参数，4个电机模块，三轮结构，第四个模块无效
+                {
+                    In16(temph, str_cmd.parameter[1 + 8*h], str_cmd.parameter[0 + 8*h]);
+                    In16(templ, str_cmd.parameter[3 + 8*h], str_cmd.parameter[2 + 8*h]);
+                    In32(motor_data[0].sendspeed, templ, temph);
+                }
+                
+            //  receiveresult = 1;                                              // 成功解析一帧上位机协议包标志
+            }
+            
+            /*
+            // 发送第一个电机模块
+            if (receiveresult)
+                UpdataMotorCmdPraseSendBuf(0x01);                               // 非中断发送方式组织数据
+            else
+                UpMotorNouseCmdPraseSendBuf(0x01);
+            UART3TXEN;
+            Wp_DelayUs(2);
+            UpMotorSlaveTxPacket(&str_motor_reply);                             // 发送数据
+            Wp_DelayUs(1);
+            UART3RXEN;
+            Wp_DelayUs(3000);                                                   // 延时2.5ms左右
+            // 解析各关节返回的数据帧，并发送各模块PDO协议包
+            result = UpMotorSlaveRxPacket(&motor_rx_buffer, &str_motor_cmd);    // 解析驱动器返回数据帧
+            if (result)
+            {
+                result = 0;
+                
+                In16(temph, str_motor_cmd.parameter[1], str_motor_cmd.parameter[0]);
+                In16(templ, str_motor_cmd.parameter[3], str_motor_cmd.parameter[2]);
+                In32(motor_data[0].receivespeed, templ, temph);
+                
+                In16(temph, str_motor_cmd.parameter[5], str_motor_cmd.parameter[4]);
+                In16(templ, str_motor_cmd.parameter[7], str_motor_cmd.parameter[6]);
+                In32(motor_data[0].receiveposition, templ, temph);
+            }
+            
+            // 发送第二个电机模块
+            if (receiveresult)
+                UpdataMotorCmdPraseSendBuf(0x02);                               // 非中断发送方式组织数据
+            else
+                UpMotorNouseCmdPraseSendBuf(0x02);
+            UART3TXEN;
+            Wp_DelayUs(2);
+            UpMotorSlaveTxPacket(&str_motor_reply);                             // 发送数据
+            Wp_DelayUs(1);
+            UART3RXEN;
+            Wp_DelayUs(3000);                                                   // 延时2.5ms左右
+            // 解析各关节返回的数据帧，并发送各模块PDO协议包
+            result = UpMotorSlaveRxPacket(&motor_rx_buffer, &str_motor_cmd);    // 解析驱动器返回数据帧
+            if (result)
+            {
+                result = 0;
+                
+                In16(temph, str_motor_cmd.parameter[1], str_motor_cmd.parameter[0]);
+                In16(templ, str_motor_cmd.parameter[3], str_motor_cmd.parameter[2]);
+                In32(motor_data[1].receivespeed, templ, temph);
+                
+                In16(temph, str_motor_cmd.parameter[5], str_motor_cmd.parameter[4]);
+                In16(templ, str_motor_cmd.parameter[7], str_motor_cmd.parameter[6]);
+                In32(motor_data[1].receiveposition, templ, temph);
+            }
+            
+            // 发送第三个电机模块
+            if (receiveresult)
+                UpdataMotorCmdPraseSendBuf(0x03);                               // 非中断发送方式组织数据
+            else
+                UpMotorNouseCmdPraseSendBuf(0x03);
+            UART3TXEN;
+            Wp_DelayUs(2);
+            UpMotorSlaveTxPacket(&str_motor_reply);                             // 发送数据
+            Wp_DelayUs(1);
+            UART3RXEN;
+            Wp_DelayUs(3000);                                                   // 延时2.5ms左右
+            // 解析各关节返回的数据帧，并发送各模块PDO协议包
+            result = UpMotorSlaveRxPacket(&motor_rx_buffer, &str_motor_cmd);    // 解析驱动器返回数据帧
+            if (result)
+            {
+                result = 0;
+                
+                In16(temph, str_motor_cmd.parameter[1], str_motor_cmd.parameter[0]);
+                In16(templ, str_motor_cmd.parameter[3], str_motor_cmd.parameter[2]);
+                In32(motor_data[2].receivespeed, templ, temph);
+
+                In16(temph, str_motor_cmd.parameter[5], str_motor_cmd.parameter[4]);
+                In16(templ, str_motor_cmd.parameter[7], str_motor_cmd.parameter[6]);
+                In32(motor_data[2].receiveposition, templ, temph);
+            }
+            
+            // 发送第四个电机模块
+            if (receiveresult)
+                UpdataMotorCmdPraseSendBuf(0x04);                               // 非中断发送方式组织数据
+            else
+                UpMotorNouseCmdPraseSendBuf(0x04);
+            UART3TXEN;
+            Wp_DelayUs(2);
+            UpMotorSlaveTxPacket(&str_motor_reply);                             // 发送数据
+            Wp_DelayUs(1);
+            UART3RXEN;
+            Wp_DelayUs(3000);                                                   // 延时2.5ms左右
+            // 解析各关节返回的数据帧，并发送各模块PDO协议包
+            result = UpMotorSlaveRxPacket(&motor_rx_buffer, &str_motor_cmd);    // 解析驱动器返回数据帧
+            if (result)
+            {
+                result = 0;
+                
+                In16(temph, str_motor_cmd.parameter[1], str_motor_cmd.parameter[0]);
+                In16(templ, str_motor_cmd.parameter[3], str_motor_cmd.parameter[2]);
+                In32(motor_data[3].receivespeed, templ, temph);
+                
+                In16(temph, str_motor_cmd.parameter[5], str_motor_cmd.parameter[4]);
+                In16(templ, str_motor_cmd.parameter[7], str_motor_cmd.parameter[6]);
+                In32(motor_data[3].receiveposition, templ, temph);
+            }
+            
+            if (receiveresult)
+            {
+                // 发送执行指令
+                ActionMotorCmdPraseSendBuf();                                   // 非中断发送方式组织执行指令
+                UART3TXEN;
+                Wp_DelayUs(2);
+                UpMotorSlaveTxPacket(&str_motor_reply);                         // 发送数据
+                Wp_DelayUs(1);
+                UART3RXEN;
+                
+                receiveresult = 0;
+            }
+            */
+            
+            Wp_SetMotorSpeed(0x01, firstspeedtemp);
+            Wp_DelayUs(3000);                                                   // 延时2.5ms左右
+            // 解析各关节返回的数据帧，并发送各模块PDO协议包
+            result = UpMotorSlaveRxPacket(&motor_rx_buffer, &str_motor_cmd);    // 解析驱动器返回数据帧
+            if (result)
+            {
+                result = 0;
+                
+                In16(temph, str_motor_cmd.parameter[1], str_motor_cmd.parameter[0]);
+                In16(templ, str_motor_cmd.parameter[3], str_motor_cmd.parameter[2]);
+                In32(motor_data[0].receivespeed, templ, temph);
+                
+                In16(temph, str_motor_cmd.parameter[5], str_motor_cmd.parameter[4]);
+                In16(templ, str_motor_cmd.parameter[7], str_motor_cmd.parameter[6]);
+                In32(motor_data[0].receiveposition, templ, temph);
+                
+                firstsendok = 1;
+            }
+            else
+                firstsendok = 0;
+            
+            Wp_SetMotorSpeed(0x02, secondspeedtemp);
+            Wp_DelayUs(3000);                                                   // 延时2.5ms左右
+            // 解析各关节返回的数据帧，并发送各模块PDO协议包
+            result = UpMotorSlaveRxPacket(&motor_rx_buffer, &str_motor_cmd);    // 解析驱动器返回数据帧
+            if (result)
+            {
+                result = 0;
+                
+                In16(temph, str_motor_cmd.parameter[1], str_motor_cmd.parameter[0]);
+                In16(templ, str_motor_cmd.parameter[3], str_motor_cmd.parameter[2]);
+                In32(motor_data[1].receivespeed, templ, temph);
+                
+                In16(temph, str_motor_cmd.parameter[5], str_motor_cmd.parameter[4]);
+                In16(templ, str_motor_cmd.parameter[7], str_motor_cmd.parameter[6]);
+                In32(motor_data[1].receiveposition, templ, temph);
+                
+                secondsendok = 1;
+            }
+            else
+                secondsendok = 0;
+            
+            Wp_SetMotorSpeed(0x03, thirdspeedtemp);
+            Wp_DelayUs(3000);                                                   // 延时2.5ms左右
+            // 解析各关节返回的数据帧，并发送各模块PDO协议包
+            result = UpMotorSlaveRxPacket(&motor_rx_buffer, &str_motor_cmd);    // 解析驱动器返回数据帧
+            if (result)
+            {
+                result = 0;
+                
+                In16(temph, str_motor_cmd.parameter[1], str_motor_cmd.parameter[0]);
+                In16(templ, str_motor_cmd.parameter[3], str_motor_cmd.parameter[2]);
+                In32(motor_data[2].receivespeed, templ, temph);
+                
+                In16(temph, str_motor_cmd.parameter[5], str_motor_cmd.parameter[4]);
+                In16(templ, str_motor_cmd.parameter[7], str_motor_cmd.parameter[6]);
+                In32(motor_data[2].receiveposition, templ, temph);
+                
+                thirdsendok = 1;    
+            }
+            else
+                thirdsendok = 0;
+            
+            Wp_SetMotorSpeed(0x04, fourthspeedtemp);
+            Wp_DelayUs(3000);                                                   // 延时2.5ms左右
+            // 解析各关节返回的数据帧，并发送各模块PDO协议包
+            result = UpMotorSlaveRxPacket(&motor_rx_buffer, &str_motor_cmd);    // 解析驱动器返回数据帧
+            if (result)
+            {
+                result = 0;
+                
+                In16(temph, str_motor_cmd.parameter[1], str_motor_cmd.parameter[0]);
+                In16(templ, str_motor_cmd.parameter[3], str_motor_cmd.parameter[2]);
+                In32(motor_data[3].receivespeed, templ, temph);
+                
+                In16(temph, str_motor_cmd.parameter[5], str_motor_cmd.parameter[4]);
+                In16(templ, str_motor_cmd.parameter[7], str_motor_cmd.parameter[6]);
+                In32(motor_data[3].receiveposition, templ, temph);
+                
+                fourthsendok = 1;
+            }
+            else
+                fourthsendok = 0;
+            
+            // 当所有的电机发送都成功，再发送执行命令
+            if (fourthsendok & thirdsendok & secondsendok & firstsendok)
+            {
+                fourthsendok = 0;
+                thirdsendok = 0;
+                secondsendok = 0;
+                firstsendok = 0;
+                
+                Wp_ActiomMotorMode();                               // 执行指令
+            }
+        }
+        
+        
+        /*  测试阶段，50ms伺服周期    */
+		if (++h >= 1)
+        {	
+            h = 0;
+            
+            gpioinputvalue = Wp_GetInputValue();                    // 读输入IO口的值
+            gpiooutputvalue = Wp_GetOutputValue();                  // 读输出IO口的值
+            Wp_GetAdcVoltageValue();                                // 计算各通道电压
+            powervalue = Wp_FilterPower();					        // 计算电池电压并滤波
+            powervalueint = powervalue * 1000;
+            Wp_GetMpu6050Dmp();								        // 获取姿态信息
+            /*
+            // 返回上位机信息
+            Wp_UpdataPcAlltiOutputSendBuf();                        // 姿态信息
+            UpRobotSlaveTxPacket(&str_reply);
+            
+            Wp_UpdataPcGpioInputSendBuf();                          // 输入端口
+            UpRobotSlaveTxPacket(&str_reply);
+            
+            Wp_UpdataPcGpioOutputSendBuf();                         // 输出端口
+            UpRobotSlaveTxPacket(&str_reply);
+            
+            Wp_UpdataPcPowerValueSendBuf();                         // 电源电压
+            UpRobotSlaveTxPacket(&str_reply);
+            
+            Wp_UpdataPcAdcSendBuf(1);                               // ADC第一组
+            UpRobotSlaveTxPacket(&str_reply);
+            Wp_UpdataPcAdcSendBuf(2);                               // ADC第二组
+            UpRobotSlaveTxPacket(&str_reply);            
+            Wp_UpdataPcAdcSendBuf(3);                               // ADC第三组
+            UpRobotSlaveTxPacket(&str_reply);
+            
+            Wp_UpdataPcMotorPraseSendBuf(1);                        // 第一个电机模块
+            UpRobotSlaveTxPacket(&str_reply);
+            Wp_UpdataPcMotorPraseSendBuf(2);                        // 第二个电机模块
+            UpRobotSlaveTxPacket(&str_reply);
+            Wp_UpdataPcMotorPraseSendBuf(3);                        // 第三个电机模块
+            UpRobotSlaveTxPacket(&str_reply);
+            Wp_UpdataPcMotorPraseSendBuf(4);                        // 第四个电机模块
+            UpRobotSlaveTxPacket(&str_reply);
+        //  Wp_UpdataPcCmdPraseSendBuf();                           // 数据打包，所有电机模块返回数据
+        //  UpRobotSlaveTxPacket(&str_reply);                       // 发送数据给上位机            
+            */
+		}
+	}
+}
+
+
+/********************************************************************************************************
+**                            End Of File
+********************************************************************************************************/

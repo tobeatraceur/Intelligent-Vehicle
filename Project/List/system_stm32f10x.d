@@ -1,0 +1,17 @@
+.\list\system_stm32f10x.o: ..\Libraries\CMSIS\CM3\DeviceSupport\ST\STM32F10x\system_stm32f10x.c
+.\list\system_stm32f10x.o: ..\Libraries\CMSIS\CM3\DeviceSupport\ST\STM32F10x\stm32f10x.h
+.\list\system_stm32f10x.o: ..\Libraries\CMSIS\CM3\CoreSupport\core_cm3.h
+.\list\system_stm32f10x.o: D:\program\keil\ARM\ARMCC\bin\..\include\stdint.h
+.\list\system_stm32f10x.o: ..\Libraries\CMSIS\CM3\DeviceSupport\ST\STM32F10x\system_stm32f10x.h
+.\list\system_stm32f10x.o: ..\Libraries\CMSIS\CM3\DeviceSupport\ST\STM32F10x\stm32f10x_conf.h
+.\list\system_stm32f10x.o: ..\Libraries\STM32F10x_StdPeriph_Driver\inc\stm32f10x_adc.h
+.\list\system_stm32f10x.o: ..\Libraries\CMSIS\CM3\DeviceSupport\ST\STM32F10x\stm32f10x.h
+.\list\system_stm32f10x.o: ..\Libraries\STM32F10x_StdPeriph_Driver\inc\stm32f10x_dma.h
+.\list\system_stm32f10x.o: ..\Libraries\STM32F10x_StdPeriph_Driver\inc\stm32f10x_exti.h
+.\list\system_stm32f10x.o: ..\Libraries\STM32F10x_StdPeriph_Driver\inc\stm32f10x_flash.h
+.\list\system_stm32f10x.o: ..\Libraries\STM32F10x_StdPeriph_Driver\inc\stm32f10x_gpio.h
+.\list\system_stm32f10x.o: ..\Libraries\STM32F10x_StdPeriph_Driver\inc\stm32f10x_rcc.h
+.\list\system_stm32f10x.o: ..\Libraries\STM32F10x_StdPeriph_Driver\inc\stm32f10x_spi.h
+.\list\system_stm32f10x.o: ..\Libraries\STM32F10x_StdPeriph_Driver\inc\stm32f10x_tim.h
+.\list\system_stm32f10x.o: ..\Libraries\STM32F10x_StdPeriph_Driver\inc\stm32f10x_usart.h
+.\list\system_stm32f10x.o: ..\Libraries\STM32F10x_StdPeriph_Driver\inc\misc.h
