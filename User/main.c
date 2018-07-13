@@ -421,6 +421,9 @@ void Wp_Sev_TimerPro(void)
     u8 fourthsendok = 0;
 
     static u16 runtimes = 0;            // 运行时间计数器，调试DEMO使用
+		static int ReceivingData = 0;       // 蓝牙接收收据标志位，为1时只接收数据，不进行操作
+		static char DataFromBle[10] = {0};    // 从蓝牙接收的数据,最多10个数据
+ 		static int DataCount = 0;             // 蓝牙数据个数
     
     
 	if (TIM_GetITStatus(TIM2, TIM_IT_CC1) != RESET)
@@ -431,23 +434,44 @@ void Wp_Sev_TimerPro(void)
 	{
 		TIM_ClearITPendingBit(TIM2, TIM_IT_Update);
 		
-		if(UART2_data >= 0x00 && UART2_data <= 0x06)//设置手动操作的方向
+		if(UART2_data >= 0x00 && UART2_data <= 0x06 && ReceivingData == 0)//设置手动操作的方向
 		{
 		  direction_command = UART2_data;
 		}
 		
-		if(UART2_data == 0x07 && operation_speed < 2400)//加速
+		if(UART2_data == 0x07 && operation_speed < 2400 && ReceivingData == 0)//加速
 		{
 			operation_speed = operation_speed + 100;
-			UART2_data = 0xff;
+			UART2_data = 0xff;                            //0xff为闲置态
 		}
 		
-		if(UART2_data == 0x08 && operation_speed > 80)//减速
+		if(UART2_data == 0x08 && operation_speed > 80 && ReceivingData == 0)//减速
 		{
 			operation_speed = operation_speed - 100;
 			UART2_data = 0xff;
 		}
     
+		if(UART2_data == 0xfe)                          //0xfe时进入接收数据状态，数据范围为0x00-0xfc
+		{
+			ReceivingData = 1;
+			DataCount = 0;
+			strcpy(DataFromBle,"\0");
+			Wp_Usart2_SendChar(0xfe);
+			UART2_data = 0xff;
+		}
+		else if(UART2_data == 0xfd)                          //0xfd时结束接收
+		{
+			ReceivingData = 0;
+			DataFromBle[DataCount ++] = '\0';                       // 结尾符
+			Wp_Usart2_SendStr(DataFromBle);               //回显字符串
+			UART2_data = 0xff;
+		}
+		else if(ReceivingData == 1 && UART2_data != 0xff)         //0xff防止不断赋值
+		{
+			DataFromBle[DataCount ++] = UART2_data;                 //接收蓝牙数据
+			UART2_data = 0xff;
+		}
+		
     if(firstspeedtemp > 2000)                       //超速保护
       firstspeedtemp = 2000;
     if(secondspeedtemp > 2000)   
