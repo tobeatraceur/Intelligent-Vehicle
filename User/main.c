@@ -342,6 +342,10 @@ int main(void)
 										Wp_DisfloatIntegerandDecimal(0, 3, analogvalue[13], 1, 4);
 //                  Wp_DisfloatIntegerandDecimal(12, 3, analogvalue[14], 1, 1);
                     
+                    Wp_DisfloatIntegerandDecimal(7, 0, location_x, 5, 1);
+										Wp_DisfloatIntegerandDecimal(7, 1, location_y, 5, 1);
+										Wp_DisfloatIntegerandDecimal(7, 2, angle, 5, 1);
+										Wp_DisfloatIntegerandDecimal(7, 3, speed, 5, 1);
                 break;
 										
             default:
@@ -395,7 +399,7 @@ void Wp_Sev_TimerPro(void)
     static u8 n = 0;
 //  static u16 m = 0;
     
-    static u8 runflag = 0;              // 运行标志
+    //static u8 runflag = 0;              // 运行标志
     
     static u8 floatleddismode = 0;      // 流水灯显示模式
     u8 result = 0;
@@ -408,6 +412,8 @@ void Wp_Sev_TimerPro(void)
     long secondspeedtemp = 0;
     long thirdspeedtemp = 0;
     long fourthspeedtemp = 0;
+		static long operation_speed = 580;  //手动操作时的速度，默认为580
+		static u8 direction_command = 0x00;         //手动操作时的方向，默认前进
     
     u8 firstsendok = 0;                 // 成功发送标志
     u8 secondsendok = 0;    
@@ -425,7 +431,32 @@ void Wp_Sev_TimerPro(void)
 	{
 		TIM_ClearITPendingBit(TIM2, TIM_IT_Update);
 		
-        
+		if(UART2_data >= 0x00 && UART2_data <= 0x06)//设置手动操作的方向
+		{
+		  direction_command = UART2_data;
+		}
+		
+		if(UART2_data == 0x07 && operation_speed < 2400)//加速
+		{
+			operation_speed = operation_speed + 100;
+			UART2_data = 0xff;
+		}
+		
+		if(UART2_data == 0x08 && operation_speed > 80)//减速
+		{
+			operation_speed = operation_speed - 100;
+			UART2_data = 0xff;
+		}
+    
+    if(firstspeedtemp > 2000)                       //超速保护
+      firstspeedtemp = 2000;
+    if(secondspeedtemp > 2000)   
+      secondspeedtemp = 2000;
+		if(thirdspeedtemp > 2000)   
+      thirdspeedtemp = 2000;
+		if(fourthspeedtemp > 2000)   
+      fourthspeedtemp = 2000;
+		
 		if (++i >= 10)										        // 板载LED频闪
 		{
 			i = 0;
@@ -499,6 +530,9 @@ void Wp_Sev_TimerPro(void)
             }
         }
         
+				//刷新坐标
+				GetLocation();
+				
         /*
         // 测试使用，按键按下前进，后退，左转，右转
         if (key_up())                   // 前进
@@ -534,33 +568,41 @@ void Wp_Sev_TimerPro(void)
 				// 测试使用，蓝牙控制
 				if (runflag)
         {				
-            if (UART2_data == 0x01)
+            if (direction_command == 0x01)
             {
-                firstspeedtemp = -100;         // ??
-                secondspeedtemp = 100;
-                thirdspeedtemp = 100;
-                fourthspeedtemp = -100;
+                speed = operation_speed;
+								direction = 1;
+							  
             }
-            else if(UART2_data == 0x02)
+            else if(direction_command == 0x02)
             {
-                firstspeedtemp = 100;          // ??
-                secondspeedtemp = -100;
-                thirdspeedtemp = -100;
-                fourthspeedtemp = 100;          
+                speed = operation_speed;         
+							  direction = 2;
             }
-            else if(UART2_data == 0x03)
+            else if(direction_command == 0x03)
             {
-                firstspeedtemp = 100;          // ???
-                secondspeedtemp = 100;
-                thirdspeedtemp = -100;
-                fourthspeedtemp = -100;
+                speed = operation_speed;
+							  direction = 3;
             }
-            else if(UART2_data == 0x04)
+            else if(direction_command == 0x04)
             {
-                firstspeedtemp = -100;         // ???
-                secondspeedtemp = -100;
-                thirdspeedtemp = 100;
-                fourthspeedtemp = 100;
+                speed = operation_speed;
+							  direction = 4;
+            }
+						else if(direction_command == 0x00)
+            {
+                speed = operation_speed;
+							  direction = 0;
+            }
+						else if(direction_command == 0x05)
+            {
+                speed = operation_speed - 40;    //旋转的默认速度为540，即580-40
+							  direction = 5;
+            }
+						else if(direction_command == 0x06)
+            {
+                speed = operation_speed - 40;
+								direction = 6;
             }
 					}
 				
@@ -1235,7 +1277,65 @@ void Wp_Sev_TimerPro(void)
             
         }
         */
+				if (runflag)                         // 用direction、speed给电机轮子速度赋值
+        {				
+					if((direction == 0)||(direction >6))
+					{
+						firstspeedtemp = 0; 
+						secondspeedtemp = 0;
+						thirdspeedtemp = 0;
+						fourthspeedtemp = 0;
+					}
+					else if(direction == 1)
+					{
+						firstspeedtemp = -speed;         // 前进
+            secondspeedtemp = speed;
+            thirdspeedtemp = speed;
+            fourthspeedtemp = -speed;
+					}
+            
+					else if(direction == 2)
+					{
+							firstspeedtemp = speed;          // 后退
+							secondspeedtemp = -speed;
+							thirdspeedtemp = -speed;
+							fourthspeedtemp = speed;          
+						
+					}
+					else if(direction == 3)
+					{
+							firstspeedtemp = -speed;          // 向左
+							secondspeedtemp = -speed;
+							thirdspeedtemp = speed;
+							fourthspeedtemp = speed;
+							
+					}
+					else if(direction == 4)
+					{
+							firstspeedtemp = speed;         // 向右
+							secondspeedtemp = speed;
+							thirdspeedtemp = -speed;
+							fourthspeedtemp = -speed;
+						 
+					}
+					else if(direction == 5)
+					{
+							firstspeedtemp = speed;         	 // 左转
+							secondspeedtemp = speed;
+							thirdspeedtemp = speed;
+							fourthspeedtemp = speed;
+
+					}
+					else if(direction == 6)
+					{
+							firstspeedtemp = -speed;         	 // 右转
+							secondspeedtemp = -speed;
+							thirdspeedtemp = -speed;
+							fourthspeedtemp = -speed;
+					}
+				}
         
+					
         if (++n >= 1)
         {
             n = 0;

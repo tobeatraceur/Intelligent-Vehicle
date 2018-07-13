@@ -43,7 +43,7 @@
             <NotGenerated>0</NotGenerated>
             <InvalidFlash>1</InvalidFlash>
           </TargetStatus>
-          <OutputDirectory>.\List\</OutputDirectory>
+          <OutputDirectory>..\..\</OutputDirectory>
           <OutputName>WP_ALL</OutputName>
           <CreateExecutable>1</CreateExecutable>
           <CreateLib>0</CreateLib>
@@ -75,7 +75,7 @@
           <AfterMake>
             <RunUserProg1>1</RunUserProg1>
             <RunUserProg2>0</RunUserProg2>
-            <UserProg1Name>C:\Keil\ARM\ARMCC\bin\fromelf.exe "..\Project\List\WP_ALL.axf" --bin --output "..\Project\List\WP_ALL.bin"</UserProg1Name>
+            <UserProg1Name>D:\program\Keil\ARM\ARMCC\bin\fromelf.exe "..\Project\List\WP_ALL.axf" --bin --output "..\Project\List\WP_ALL.bin"</UserProg1Name>
             <UserProg2Name></UserProg2Name>
             <UserProg1Dos16Mode>0</UserProg1Dos16Mode>
             <UserProg2Dos16Mode>0</UserProg2Dos16Mode>
@@ -371,7 +371,7 @@
             </VariousControls>
           </Aads>
           <LDads>
-            <umfTarg>1</umfTarg>
+            <umfTarg>0</umfTarg>
             <Ropi>0</Ropi>
             <Rwpi>0</Rwpi>
             <noStLib>0</noStLib>
@@ -526,6 +526,11 @@
               <FileName>Wp_Dma.c</FileName>
               <FileType>1</FileType>
               <FilePath>..\User\Wp_Dma.c</FilePath>
+            </File>
+            <File>
+              <FileName>Location.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>.\Location.c</FilePath>
             </File>
           </Files>
         </Group>

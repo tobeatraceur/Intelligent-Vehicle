@@ -1151,10 +1151,20 @@ void Wp_DisfloatIntegerandDecimal(unsigned char x, unsigned char y, float real, 
 	unsigned int real_decimal = 0;      // 小数部分缓存
     
 //	x = x * 8;                          // X轴起始位
-    
+  if(real >=0)  
+	{
 	real_int = (int)real;               // 整数部分
 	decimal = real - real_int;
 	real_decimal = decimal * 1e4;       // 小数部分，放大1000倍
+	n[0] = (real_int / 10000) % 10;
+	}
+	else
+	{
+		real_int=(int)fabs(real);
+		decimal = fabs(real) - real_int;
+		real_decimal = decimal * 1e4;
+		n[0] = '-';                         //负数用第一位表示符号
+	}
     
 /*	while(real_int/10/j != 0)           // 计算整数部分位数
 	{
@@ -1162,7 +1172,7 @@ void Wp_DisfloatIntegerandDecimal(unsigned char x, unsigned char y, float real, 
         i_Count++;
 	}
 */  
-	n[0] = (real_int / 10000) % 10; 
+	 
 	n[1] = (real_int / 1000) % 10;
 	n[2] = (real_int / 100) % 10;
 	n[3] = (real_int / 10) % 10;

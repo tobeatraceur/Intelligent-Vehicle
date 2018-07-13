@@ -7,3 +7,58 @@ D:\交货资料（启智模块机器人）\QiZhiSTM32ControlerDemoAll-20170228\Project\IO_TES
 Project File Date:  11/03/2017
 
 <h2>Output:</h2>
+Rebuild target 'QiZhiRobot'
+compiling core_cm3.c...
+--- Error: failed to execute 'C:\Keil\ARM\ARMCC\bin\ArmCC'
+".\List\WP_ALL.axf" - 1 Errors, 0 Warning(s).
+Target not created
+Rebuild target 'QiZhiRobot'
+compiling core_cm3.c...
+--- Error: failed to execute 'C:\Keil\ARM\ARMCC\bin\ArmCC'
+".\List\WP_ALL.axf" - 1 Errors, 0 Warning(s).
+Target not created
+Build target 'QiZhiRobot'
+compiling core_cm3.c...
+--- Error: failed to execute 'C:\Keil\ARM\ARMCC\bin\ArmCC'
+".\List\WP_ALL.axf" - 1 Errors, 0 Warning(s).
+Target not created
+Rebuild target 'QiZhiRobot'
+compiling core_cm3.c...
+--- Error: failed to execute 'C:\Keil\ARM\ARMCC\bin\ArmCC'
+".\List\WP_ALL.axf" - 1 Errors, 0 Warning(s).
+Target not created
+Build target 'QiZhiRobot'
+compiling core_cm3.c...
+--- Error: failed to execute 'C:\Keil\ARM\ARMCC\bin\ArmCC'
+".\List\WP_ALL.axf" - 1 Errors, 0 Warning(s).
+Target not created
+Rebuild target 'QiZhiRobot'
+compiling core_cm3.c...
+--- Error: failed to execute 'C:\Keil\ARM\ARMCC\bin\ArmCC'
+".\WP_ALL.axf" - 1 Errors, 0 Warning(s).
+Target not created
+Build target 'QiZhiRobot'
+compiling core_cm3.c...
+--- Error: failed to execute 'C:\Keil\ARM\ARMCC\bin\ArmCC'
+"..\..\WP_ALL.axf" - 1 Errors, 0 Warning(s).
+Target not created
+Build target 'QiZhiRobot'
+compiling core_cm3.c...
+--- Error: failed to execute 'C:\Keil\ARM\ARMCC\bin\ArmCC'
+"..\..\WP_ALL.axf" - 1 Errors, 0 Warning(s).
+Target not created
+Rebuild target 'QiZhiRobot'
+compiling core_cm3.c...
+--- Error: failed to execute 'C:\Keil\ARM\ARMCC\bin\ArmCC'
+"..\..\WP_ALL.axf" - 1 Errors, 0 Warning(s).
+Target not created
+Build target 'QiZhiRobot'
+compiling core_cm3.c...
+--- Error: failed to execute 'C:\Keil\ARM\ARMCC\bin\ArmCC'
+"..\..\WP_ALL.axf" - 1 Errors, 0 Warning(s).
+Target not created
+Rebuild target 'QiZhiRobot'
+compiling core_cm3.c...
+--- Error: failed to execute 'C:\Keil\ARM\ARMCC\bin\ArmCC'
+"..\..\WP_ALL.axf" - 1 Errors, 0 Warning(s).
+Target not created

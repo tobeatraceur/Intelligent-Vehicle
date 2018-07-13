@@ -1,4 +1,4 @@
---cpu Cortex-M3
+
 ".\list\core_cm3.o"
 ".\list\main.o"
 ".\list\wp_adc.o"
@@ -52,7 +52,6 @@
 ".\list\startup_stm32f10x_hd.o"
 ".\list\inv_mpu.o"
 ".\list\inv_mpu_dmp_motion_driver.o"
---library_type=microlib --strict --scatter ".\List\WP_ALL.sct"
---summary_stderr --info summarysizes --map --xref --callgraph --symbols
+--ro-base 0x08000000 --entry 0x08000000 --rw-base 0x20000000 --strict --map --xref --callgraph --symbols
 --info sizes --info totals --info unused --info veneers
 --list ".\List\WP_ALL.map" -o .\List\WP_ALL.axf
