@@ -432,6 +432,8 @@ void Wp_Sev_TimerPro(void)
 		static int ReceivingData = 0;       // 蓝牙接收收据标志位，为1时只接收数据，不进行操作
 		static u8 DataFromBle[10] = {0};    // 从蓝牙接收的数据,最多10个数据
  		static int DataCount = 0;             // 蓝牙数据个数
+		
+		static int AlarmFlag = 0;             //报警标志位
     
 	if (TIM_GetITStatus(TIM2, TIM_IT_CC1) != RESET)
 	{
@@ -563,6 +565,19 @@ void Wp_Sev_TimerPro(void)
         
 				//刷新坐标
 				GetLocation();
+				
+				//温度过高报警，用最后一个ADC
+				if(analogvalue[14] > 0.40 && AlarmFlag == 0)      //阈值40摄氏度
+				{
+					Wp_Usart2_SendChar(0x01);     //0x01为报警
+					AlarmFlag = 1;
+				}
+				
+				if(analogvalue[14] < 0.35 && AlarmFlag == 1)      //阈值35摄氏度
+				{
+					Wp_Usart2_SendChar(0x02);     //0x02为解除报警
+					AlarmFlag = 0;
+				}
 				
         /*
         // 测试使用，按键按下前进，后退，左转，右转
