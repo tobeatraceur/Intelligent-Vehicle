@@ -660,7 +660,7 @@ void Wp_Sev_TimerPro(void)
 				//if (DataFromBle[0] == 0xfc)
 				//DataFromBle[1] = 0x15;
 				//DataFromBle[2] = 0x10;
-				if (!runflag)
+				if (!runflag)													// 停止运动后回到状态0
 				{
 						navistate = 0;
 				}
@@ -732,6 +732,7 @@ void Wp_Sev_TimerPro(void)
 												DataFromBle[0] = 0xfb;																				// 该导航寄存器的值，退出导航
 												direction = 0;
 												Wp_Usart2_SendChar(0xcc);
+												navistate = 0;
 										}
 										if (!(infrareddistance[1] >= 200 && infrareddistance[2] >= 200 			// 如果遇到障碍物，开始执行避障过程
 											&& infrareddistance[0] >= 200 && infrareddistance[3] >= 200))
