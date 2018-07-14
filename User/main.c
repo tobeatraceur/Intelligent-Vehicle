@@ -679,7 +679,7 @@ void Wp_Sev_TimerPro(void)
 												dtheta = 0;
 												DataFromBle[0] = 0xfb;																	// 角度差为0，第一位给0xfb，意味着到达位置，退出导航
 												direction = 0;
-												Wp_Usart2_SendChar(0xcc);																// 调试用，给上位机发一个到达的信息
+												Wp_Usart2_SendChar(0xfb);																// 调试用，给上位机发一个到达的信息
 										}
 										else if (dx == 0)																					// dx = 0的情况
 										{
@@ -731,7 +731,7 @@ void Wp_Sev_TimerPro(void)
 										{	
 												DataFromBle[0] = 0xfb;																				// 该导航寄存器的值，退出导航
 												direction = 0;
-												Wp_Usart2_SendChar(0xcc);
+												Wp_Usart2_SendChar(0xfb);
 												navistate = 0;
 										}
 										if (!(infrareddistance[1] >= 200 && infrareddistance[2] >= 200 			// 如果遇到障碍物，开始执行避障过程
