@@ -27,6 +27,7 @@
 **
 *************************************************************************************************************/
 #include "Wp_Sys.h"
+#include "math.h"
 
 
 /*************************************************************************************************************
@@ -85,6 +86,18 @@ int main(void)
 
 		//Wp_SetPortOutputValue(1,1);																			//调用Wp_SetPortOutputValue(u8 port, u8 value)，使Out1输出1
 																																			//（注意这里Out端口不是从0开始）
+		
+		  // 计算红外传感器测量距离值
+      for (n = 0; n < 12; n++)
+			{
+        infrareddistance[n] = Wp_CalculateDistanceChannel(n+1);
+      }
+			// 计算灰度传感器光通量值
+      for (n = 0; n < 6; n++)
+      {
+          luxvalue[n] = Wp_CalculateLuxChannel(7+n);       // 测试使用，计算Lux    灰度传感器从第7个开始
+      }
+
         switch(keyvalue)
         {
             case 1:                                                     // 显示姿态信息
@@ -280,12 +293,6 @@ int main(void)
                     printf("InfraredDistancs\n");
                     OLED_P8x16Str(4, 1, "Unit:mm");
                     
-                    // 计算红外传感器测量距离值
-                    for (n = 0; n < 12; n++)
-                    {
-                        infrareddistance[n] = Wp_CalculateDistanceChannel(n+1);
-                    }
-                    
                 break;
                     
             case 6:
@@ -299,12 +306,6 @@ int main(void)
                     printf("  GrayscaleLux\n");
                     OLED_P8x16Str(2, 1, "Unit:10mLux");
                     
-                    // 计算灰度传感器光通量值
-                    for (n = 0; n < 6; n++)
-                    {
-                        luxvalue[n] = Wp_CalculateLuxChannel(7+n);       // 测试使用，计算Lux    灰度传感器从第7个开始
-                    }
-
                 break;
                    
 						case 7:                                                     // ???????
@@ -335,13 +336,13 @@ int main(void)
 //                  Wp_DisfloatIntegerandDecimal(0, 2, analogvalue[7], 1, 1);
 //                  Wp_DisfloatIntegerandDecimal(4, 2, analogvalue[8], 1, 1);
 //                  Wp_DisfloatIntegerandDecimal(8, 2, analogvalue[9], 1, 1);
-										Wp_DisfloatIntegerandDecimal(0, 0, analogvalue[10], 1, 4);
-//                    
-										Wp_DisfloatIntegerandDecimal(0, 1, analogvalue[11], 1, 4);
-										Wp_DisfloatIntegerandDecimal(0, 2, analogvalue[12], 1, 4);
-										Wp_DisfloatIntegerandDecimal(0, 3, analogvalue[13], 1, 4);
-//                  Wp_DisfloatIntegerandDecimal(12, 3, analogvalue[14], 1, 1);
+										
                     
+										//Wp_DisfloatIntegerandDecimal(0, 0, analogvalue[10], 1, 4);            
+										//Wp_DisfloatIntegerandDecimal(0, 1, analogvalue[11], 1, 4);
+										//Wp_DisfloatIntegerandDecimal(0, 2, analogvalue[12], 1, 4);
+										//Wp_DisfloatIntegerandDecimal(0, 3, analogvalue[13], 1, 4);
+										
                     Wp_DisfloatIntegerandDecimal(7, 0, location_x, 5, 1);
 										Wp_DisfloatIntegerandDecimal(7, 1, location_y, 5, 1);
 										Wp_DisfloatIntegerandDecimal(7, 2, angle, 5, 1);
@@ -391,6 +392,13 @@ void Wp_Sev_TimerPro(void)
 		static int preinfrareddistance[4] = {0};					// 记录前一状态的红外距离，用在目标追踪里，在遇到墙等极端情况停下时可以判断移动物体的方位	
 		static int counttime = 0;											// 服务于目标追踪功能，用于记录时间，从而实现定时
 		static int preState = 0;												// 轨道循迹时使用，用来记录前一时刻轨道信息，preState = 0代表左边有轨道
+		static double dx = 0;														// 用于导航程序，记录与目标之间x，y方向的距离
+		static double dy = 0;
+		static double dtheta = 0;												// 用于导航程序，记录车头与目标方向的角度差，和为此转动的时间差
+		static double dtime = 0;
+		static double destx = 0;												// 用于导航程序，记录目标的坐标
+		static double desty = 0;
+		static int navistate = 0;												// 用于导航程序，记录工作状态，总共3状态，状态0代表寻找方向，状态1代表往目标走，状态2-6代表5种避障状态
 
 	static u8 i = 0;                    // LED1闪烁
     static u16 j = 0;                   // LED2闪烁
@@ -422,9 +430,8 @@ void Wp_Sev_TimerPro(void)
 
     static u16 runtimes = 0;            // 运行时间计数器，调试DEMO使用
 		static int ReceivingData = 0;       // 蓝牙接收收据标志位，为1时只接收数据，不进行操作
-		static char DataFromBle[10] = {0};    // 从蓝牙接收的数据,最多10个数据
+		static u8 DataFromBle[10] = {0};    // 从蓝牙接收的数据,最多10个数据
  		static int DataCount = 0;             // 蓝牙数据个数
-    
     
 	if (TIM_GetITStatus(TIM2, TIM_IT_CC1) != RESET)
 	{
@@ -455,7 +462,7 @@ void Wp_Sev_TimerPro(void)
 		{
 			ReceivingData = 1;
 			DataCount = 0;
-			strcpy(DataFromBle,"\0");
+			DataFromBle[0] = '\0';
 			Wp_Usart2_SendChar(0xfe);
 			UART2_data = 0xff;
 		}
@@ -463,7 +470,7 @@ void Wp_Sev_TimerPro(void)
 		{
 			ReceivingData = 0;
 			DataFromBle[DataCount ++] = '\0';                       // 结尾符
-			Wp_Usart2_SendStr(DataFromBle);               //回显字符串
+			Wp_Usart2_SendStr((char*)DataFromBle);               //回显字符串
 			UART2_data = 0xff;
 		}
 		else if(ReceivingData == 1 && UART2_data != 0xff)         //0xff防止不断赋值
@@ -589,6 +596,7 @@ void Wp_Sev_TimerPro(void)
         }
         */
 				
+				/*
 				// 测试使用，蓝牙控制
 				if (runflag)
         {				
@@ -628,9 +636,207 @@ void Wp_Sev_TimerPro(void)
                 speed = operation_speed - 40;
 								direction = 6;
             }
-					}
+				}
+				*/
 				
-				
+				//{0xfc,0x10,0x10}
+				//if (UART2_DATA == 0xff)				代码之后的思路
+						
+				//if (DataFromBle[0] == 0xfc)
+				//DataFromBle[1] = 0x15;
+				//DataFromBle[2] = 0x10;
+				if (!runflag)
+				{
+						navistate = 0;
+				}
+				if (DataFromBle[0] == 0xfc)
+				{
+						if (runflag)
+						{
+								destx = (int)DataFromBle[1]%16 + (int)DataFromBle[1]/16*10;						// 将收到的蓝牙目标地址信息转换为double类型，用到BCD码的转换
+								desty = (int)DataFromBle[2]%16 + (int)DataFromBle[2]/16*10;
+								dx = destx - location_x;																		// 计算小车与目标位置的差值
+								dy = desty - location_y;
+								if (navistate == 0)
+								{
+										if (dx == 0 && dy == 0)																				// 如果没有差值
+										{
+												dtheta = 0;
+												DataFromBle[0] = 0xfb;																	// 角度差为0，第一位给0xfb，意味着到达位置，退出导航
+												direction = 0;
+												Wp_Usart2_SendChar(0xcc);																// 调试用，给上位机发一个到达的信息
+										}
+										else if (dx == 0)																					// dx = 0的情况
+										{
+												if (dy > 0)
+												{
+													dtheta = angle - 90;
+												}
+												else if (dy < 0)
+												{
+													dtheta = angle - 270;
+												}
+										}
+										else if (dx > 0 && dy >= 0)												// 第一象限如果dx,dy大于零，atan计算出的就是目标方位，角度差就是angle-atan(dy/dx)
+										{
+												dtheta = angle - atan(dy/dx)*180/PI;
+										}
+										else if (dx < 0)																	// 第二三象限，atan计算值加180才是真正的目标方位
+										{
+												dtheta = angle - atan(dy/dx)*180/PI - 180;
+										}
+										else if (dx > 0 && dy < 0)													// 第四象限，atan需要加360才是真正的目标方位
+										{
+												dtheta = angle - atan(dy/dx)*180/PI - 360; 			
+										}
+										if (dtheta > 1 || dtheta < -1)																	// 如果有角度差，就旋转，左旋还是右旋看差值正负（只是一个小优化）
+										{
+												if (dtheta >= 180 || (dtheta <= 0 && dtheta > -180))					// dtheta在180~360以及-180~0度时，左转能更快找到目标方向	
+												{
+														direction = 5;
+														speed = 540;
+												}
+												else																// 其他情况，右转更快
+												{
+														direction = 6;
+														speed = 540;
+												}
+										}
+										else
+										{
+												direction = 0;
+												navistate = 1;
+										}
+								}
+								else if (navistate == 1)									// 前进状态
+								{
+										direction = 1;
+										speed = 580;
+										if (dx <= 5 && dx >= -5 && dy <= 5 && dy >= -5)										// 到达目标位置内的一个范围
+										{	
+												DataFromBle[0] = 0xfb;																				// 该导航寄存器的值，退出导航
+												direction = 0;
+												Wp_Usart2_SendChar(0xcc);
+										}
+										if (!(infrareddistance[1] >= 200 && infrareddistance[2] >= 200 			// 如果遇到障碍物，开始执行避障过程
+											&& infrareddistance[0] >= 200 && infrareddistance[3] >= 200))
+										{
+												direction = 0;
+												if (infrareddistance[0] < 200 && infrareddistance[1] >= 200 &&				// 多种避障状态，障碍物在左边
+													infrareddistance[2] >= 200 && infrareddistance[3] >= 200)
+														navistate = 2;
+												else if (infrareddistance[3] < 200 && infrareddistance[1] >= 200 &&			// 右边
+													infrareddistance[2] >= 200 && infrareddistance[0] >= 200)
+														navistate = 3;
+												else if (infrareddistance[0] < 200 && infrareddistance[1] < 200 &&			// 左前
+													infrareddistance[2] >= 200 && infrareddistance[3] >= 200)
+														navistate = 4;
+												else if (infrareddistance[2] < 200 && infrareddistance[3] < 200 &&			// 右前	
+													infrareddistance[1] >= 200 && infrareddistance[0] >= 200)
+														navistate = 5;
+												else																																	// 其余（主要是前方）
+														navistate = 6;
+												runtimes = 0;
+										}
+								}
+								else if (navistate == 2)															// 避障状态2
+								{
+										runtimes++;
+										if (runtimes > 0 && runtimes <= 25)													// 左侧，稍向右转，约50度
+										{
+												direction = 6;
+												speed = 540;
+										}
+										else if (runtimes > 25 && runtimes <= 75)															// 前进，绕过障碍物
+										{
+												direction = 1;
+												speed = 580;
+										}
+										else if (runtimes > 75)
+										{
+												navistate = 0;															// 完成后回到状态0
+												runtimes = 0;
+										}
+								}
+								else if (navistate == 3)															// 避障状态3
+								{
+										runtimes++;
+										if (runtimes > 0 && runtimes <= 25)													// 右侧，稍向左转，约50度
+										{
+												direction = 5;
+												speed = 540;
+										}
+										else if (runtimes > 25 && runtimes <= 75)															// 前进，绕过障碍物
+										{
+												direction = 1;
+												speed = 580;
+										}
+										if (runtimes > 75)															
+										{
+												navistate = 0;															// 完成后回到状态0
+												runtimes = 0;
+										}
+								}
+								else if (navistate == 4)															// 避障状态4
+								{
+										runtimes++;
+										if (runtimes > 0 && runtimes <= 35)													// 左前，稍向右转，约70度
+										{
+												direction = 6;
+												speed = 540;
+										}
+										else if (runtimes > 35 && runtimes <= 85)															// 前进，绕过障碍物
+										{
+												direction = 1;
+												speed = 580;
+										}
+										if (runtimes > 85)														
+										{
+												navistate = 0;															// 完成后回到状态0
+												runtimes = 0;
+										}
+								}
+								else if (navistate == 5)															// 避障状态5
+								{
+										runtimes++;
+										if (runtimes > 0 && runtimes <= 35)												// 右前，稍向左转，约70度
+										{
+												direction = 5;
+												speed = 540;
+										}
+										else if (runtimes > 35 && runtimes <= 85)															// 前进，绕过障碍物
+										{
+												direction = 1;
+												speed = 580;
+										}
+										if (runtimes > 85)															
+										{
+												navistate = 0;															// 完成后回到状态0
+												runtimes = 0;
+										}
+								}
+								else if (navistate == 6)
+								{
+										runtimes++;
+										if (runtimes > 0 && runtimes <= 45)												// 前方，向左转90度
+										{
+												direction = 5;
+												speed = 540;
+										}
+										else if (runtimes > 45 && runtimes <= 95)															// 前进，绕过障碍物
+										{
+												direction = 1;
+												speed = 580;
+										}
+										if (runtimes > 95)														
+										{
+												navistate = 0;															// 完成后回到状态0
+												runtimes = 0;
+										}
+								}
+						}	
+				}				
+					
 				/*
 				// 测试使用，转90度，缓慢前进固定距离
 				if (runflag)
