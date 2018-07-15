@@ -434,7 +434,9 @@ void Wp_Sev_TimerPro(void)
  		static int DataCount = 0;             // 蓝牙数据个数
 		
 		static int AlarmFlag = 0;             //报警标志位
-    
+		static int ModeFlag = 0;            //0:手动或导航，1:跟踪标志位,2:红外避障标志位,3:灭火标志位
+		
+		
 	if (TIM_GetITStatus(TIM2, TIM_IT_CC1) != RESET)
 	{
 		TIM_ClearITPendingBit(TIM2, TIM_IT_CC1);
@@ -446,27 +448,53 @@ void Wp_Sev_TimerPro(void)
 		if(UART2_data >= 0x00 && UART2_data <= 0x06 && ReceivingData == 0)//设置手动操作的方向
 		{
 		  direction_command = UART2_data;
+			UART2_data = 0xff; 
+			ModeFlag = 0;                                //跳出其他功能模式
 		}
 		
 		if(UART2_data == 0x07 && operation_speed < 2400 && ReceivingData == 0)//加速
 		{
 			operation_speed = operation_speed + 100;
 			UART2_data = 0xff;                            //0xff为闲置态
+			ModeFlag = 0;
 		}
 		
 		if(UART2_data == 0x08 && operation_speed > 80 && ReceivingData == 0)//减速
 		{
 			operation_speed = operation_speed - 100;
 			UART2_data = 0xff;
+			ModeFlag = 0;
 		}
     
-		if(UART2_data == 0xfe)                          //0xfe时进入接收数据状态，数据范围为0x00-0xfc
+		if(UART2_data == 0x09 && ReceivingData == 0)//红外避障
+		{
+			
+			UART2_data = 0xff;
+			ModeFlag = 2;
+		}
+		
+		if(UART2_data == 0x10 && ReceivingData == 0)//巡线灭火
+		{
+			
+			UART2_data = 0xff;
+			ModeFlag = 3;
+		}
+		
+		if(UART2_data == 0x11 && ReceivingData == 0)//跟踪
+		{
+			
+			UART2_data = 0xff;
+			ModeFlag = 1;
+		}
+		
+		if(UART2_data == 0xfe)                          //0xfe时进入接收数据状态，数据范围为0x00-0xfa
 		{
 			ReceivingData = 1;
 			DataCount = 0;
 			DataFromBle[0] = '\0';
 			Wp_Usart2_SendChar(0xfe);
 			UART2_data = 0xff;
+			ModeFlag = 0;
 		}
 		else if(UART2_data == 0xfd)                          //0xfd时结束接收
 		{
@@ -533,7 +561,7 @@ void Wp_Sev_TimerPro(void)
                 keyvalue--;                                         // 切换屏幕状态
                 if (keyvalue <= 0)
                 {
-                    keyvalue = 6;
+                    keyvalue = 7;
                 }
             }
             /*  刷新按键状态，用户切换屏幕使用      */
@@ -611,7 +639,7 @@ void Wp_Sev_TimerPro(void)
         }
         */
 				
-				/*
+				
 				// 测试使用，蓝牙控制
 				if (runflag)
         {				
@@ -652,7 +680,7 @@ void Wp_Sev_TimerPro(void)
 								direction = 6;
             }
 				}
-				*/
+				
 				
 				//{0xfc,0x10,0x10}
 				//if (UART2_DATA == 0xff)				代码之后的思路
@@ -895,7 +923,7 @@ void Wp_Sev_TimerPro(void)
 				
 				/*
 				// 灭火程序。前进，寻找高温，确认找到后转向，执行，转回
-				if (runflag)
+				if (runflag == 1 && ModeFlag == 3)
         {
 						if (normalstate == 1 && leftturnstate == 0 && rightturnstate == 0)
 						{
@@ -1072,96 +1100,99 @@ void Wp_Sev_TimerPro(void)
 				*/
 				
 				
-				/*
-				//测试使用，目标追踪，麦克纳姆轮
-				if (runflag)
-        {
-						if (infrareddistance[0] <= 200	||			// 目标较近
-										infrareddistance[1] <= 200 || infrareddistance[2] <= 150
-										|| infrareddistance[3] <= 150)		
-						{
-								firstspeedtemp = 0;											// 停止
-                secondspeedtemp = 0;
-                thirdspeedtemp = 0;
-                fourthspeedtemp = 0; 
-								
-//								if (counttime < 50)
-//								{
-//										counttime++;
-//								}
-//								else
-//							{
-//									if (infrareddistance[0] > preinfrareddistance[0] + 50)				//物体在左方移动
-//										{
-//												firstspeedtemp = 800;							 // 左转
-//												secondspeedtemp = 800;
-//												thirdspeedtemp = 800;
-//												fourthspeedtemp = 800;  
-//										}
-//										else if (infrareddistance[3] > preinfrareddistance[3] + 50)				//物体在右方移动
-//										{
-//												firstspeedtemp = -800;							 // 右转
-//												secondspeedtemp = -800;
-//												thirdspeedtemp = -800;
-//												fourthspeedtemp = -800;  
-//										}
-//										preinfrareddistance[0] = infrareddistance[0];
-//										preinfrareddistance[1] = infrareddistance[1];
-//										preinfrareddistance[2] = infrareddistance[2];
-//										preinfrareddistance[3] = infrareddistance[3];
-//										counttime = 0;
-//								}
-								
-							}
-						else
-						{
-								if (infrareddistance[1] >= 400 && infrareddistance[2] >= 400 				// 目标在前方较远
-										&& infrareddistance[0] >= infrareddistance[1] 
-										&& infrareddistance[3] >= infrareddistance[2]
-										&& infrareddistance[2] >= infrareddistance[1] - 200 
-										&& infrareddistance[1] >= infrareddistance[2] - 200)		// 两边更远
-								{
-										firstspeedtemp = -2000;									// 较快前进
-										secondspeedtemp = 2000;
-										thirdspeedtemp = 2000;
-										fourthspeedtemp = -2000;
-								}
-								else if (infrareddistance[1] >= 200 && infrareddistance[2] >= 200 				// 目标在前方较近
-												&& infrareddistance[0] >= infrareddistance[1] 
-										&& infrareddistance[3] >= infrareddistance[2]
-										&& infrareddistance[2] >= infrareddistance[1] - 200 
-										&& infrareddistance[1] >= infrareddistance[2] - 200)		// 两边更远
-								{
-										firstspeedtemp = -800;									// 较慢前进
-										secondspeedtemp = 800;
-										thirdspeedtemp = 800;
-										fourthspeedtemp = -800;
-								}
-								else if (infrareddistance[0] < infrareddistance[1] 
-												|| infrareddistance[1] < infrareddistance[2] - 200 
-												|| infrareddistance[4] < infrareddistance[1] - 50)												// 目标在左边
-								{
-										firstspeedtemp = 1000;							 // 左转
-										secondspeedtemp = 1000;
-										thirdspeedtemp = 1000;
-										fourthspeedtemp = 1000;  
-								}
-								else if (infrareddistance[3] < infrareddistance[2] 
-												|| infrareddistance[2] < infrareddistance[1] - 200
-												|| infrareddistance[5] < infrareddistance[2] - 50)												// 目标在右边
-								{
-										firstspeedtemp = -1000;							 // 右转
-										secondspeedtemp = -1000;
-										thirdspeedtemp = -1000;
-										fourthspeedtemp = -1000;  
-								}			
-						}
-        }
-				*/
 				
-        /*
+				//测试使用，目标追踪，麦克纳姆轮
+				if (ModeFlag == 1 && runflag == 1)
+        {
+
+						{
+							if (infrareddistance[0] <= 200	||			// 目标较近
+											infrareddistance[1] <= 200 || infrareddistance[2] <= 150
+											|| infrareddistance[3] <= 150)		
+							{
+									firstspeedtemp = 0;											// 停止
+									secondspeedtemp = 0;
+									thirdspeedtemp = 0;
+									fourthspeedtemp = 0; 
+									
+	//								if (counttime < 50)
+	//								{
+	//										counttime++;
+	//								}
+	//								else
+	//							{
+	//									if (infrareddistance[0] > preinfrareddistance[0] + 50)				//物体在左方移动
+	//										{
+	//												firstspeedtemp = 800;							 // 左转
+	//												secondspeedtemp = 800;
+	//												thirdspeedtemp = 800;
+	//												fourthspeedtemp = 800;  
+	//										}
+	//										else if (infrareddistance[3] > preinfrareddistance[3] + 50)				//物体在右方移动
+	//										{
+	//												firstspeedtemp = -800;							 // 右转
+	//												secondspeedtemp = -800;
+	//												thirdspeedtemp = -800;
+	//												fourthspeedtemp = -800;  
+	//										}
+	//										preinfrareddistance[0] = infrareddistance[0];
+	//										preinfrareddistance[1] = infrareddistance[1];
+	//										preinfrareddistance[2] = infrareddistance[2];
+	//										preinfrareddistance[3] = infrareddistance[3];
+	//										counttime = 0;
+	//								}
+									
+								}
+							else
+							{
+									if (infrareddistance[1] >= 400 && infrareddistance[2] >= 400 				// 目标在前方较远
+											&& infrareddistance[0] >= infrareddistance[1] 
+											&& infrareddistance[3] >= infrareddistance[2]
+											&& infrareddistance[2] >= infrareddistance[1] - 200 
+											&& infrareddistance[1] >= infrareddistance[2] - 200)		// 两边更远
+									{
+											firstspeedtemp = -2000;									// 较快前进
+											secondspeedtemp = 2000;
+											thirdspeedtemp = 2000;
+											fourthspeedtemp = -2000;
+									}
+									else if (infrareddistance[1] >= 200 && infrareddistance[2] >= 200 				// 目标在前方较近
+													&& infrareddistance[0] >= infrareddistance[1] 
+											&& infrareddistance[3] >= infrareddistance[2]
+											&& infrareddistance[2] >= infrareddistance[1] - 200 
+											&& infrareddistance[1] >= infrareddistance[2] - 200)		// 两边更远
+									{
+											firstspeedtemp = -800;									// 较慢前进
+											secondspeedtemp = 800;
+											thirdspeedtemp = 800;
+											fourthspeedtemp = -800;
+									}
+									else if (infrareddistance[0] < infrareddistance[1] 
+													|| infrareddistance[1] < infrareddistance[2] - 200 
+													|| infrareddistance[4] < infrareddistance[1] - 50)												// 目标在左边
+									{
+											firstspeedtemp = 1000;							 // 左转
+											secondspeedtemp = 1000;
+											thirdspeedtemp = 1000;
+											fourthspeedtemp = 1000;  
+									}
+									else if (infrareddistance[3] < infrareddistance[2] 
+													|| infrareddistance[2] < infrareddistance[1] - 200
+													|| infrareddistance[5] < infrareddistance[2] - 50)												// 目标在右边
+									{
+											firstspeedtemp = -1000;							 // 右转
+											secondspeedtemp = -1000;
+											thirdspeedtemp = -1000;
+											fourthspeedtemp = -1000;  
+									}			
+							}
+
+        }
+				
+				
+        
         // 避障测试程序，仅使用前4个红外测距传感器，适用于麦克纳姆轮和普通论
-        if (runflag)
+        if (runflag == 1 && ModeFlag == 2)
         {
             if (infrareddistance[1] >= 200 && infrareddistance[2] >= 200 
                 && infrareddistance[0] >= 200 && infrareddistance[3] >= 200)
@@ -1230,7 +1261,7 @@ void Wp_Sev_TimerPro(void)
                 fourthspeedtemp = 1000;
             }
         }
-        */
+        
 				
 				/*
 				 // 测试使用，循迹程序，仅使用中间4个灰度传感器，适用于麦克纳姆轮和普通轮
