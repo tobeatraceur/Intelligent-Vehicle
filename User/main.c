@@ -78,6 +78,10 @@ int main(void)
 	Wp_SetUART2Hadler(ReceiveUart2Hadler);		    // UART2中断入口函数
 	Wp_SetUART3Hadler(ReceiveUart3Hadler);		    // UART3中断入口函数
 	
+	Wp_UserTimerEnableIT(TIMER_CHANNEL0, 10);	    // 使能计时器0，计时时间10us
+	Wp_UserTimerEnableIT(TIMER_CHANNEL1, 500000);	    // 使能计时器2，计时时间500ms
+	Wp_UserTimerSetHadler(TimerHadler);			        // 传递计时器中断入口函数指针
+	
 	Wp_SystemConfigure();						    // 系统初始化
 	
 	while(1)
@@ -436,6 +440,8 @@ void Wp_Sev_TimerPro(void)
 		static int AlarmFlag = 0;             //报警标志位
 		static int ModeFlag = 0;            //0:手动或导航，1:跟踪标志位,2:红外避障标志位,3:灭火标志位
 		
+		static int SendPositionCount = 0;    //计数，用于回传坐标，循环20次刷新一次，即1s
+		//u8 SendStr[3] = {0};                 // 用于回传手机通信
 		
 	if (TIM_GetITStatus(TIM2, TIM_IT_CC1) != RESET)
 	{
@@ -455,6 +461,9 @@ void Wp_Sev_TimerPro(void)
 		if(UART2_data == 0x07 && operation_speed < 2400 && ReceivingData == 0)//加速
 		{
 			operation_speed = operation_speed + 100;
+			Wp_Usart2_SendChar(0xff);
+			Wp_Usart2_SendChar(operation_speed / 100 *16 + (operation_speed /10) % 10 );
+
 			UART2_data = 0xff;                            //0xff为闲置态
 			ModeFlag = 0;
 		}
@@ -462,6 +471,10 @@ void Wp_Sev_TimerPro(void)
 		if(UART2_data == 0x08 && operation_speed > 80 && ReceivingData == 0)//减速
 		{
 			operation_speed = operation_speed - 100;
+
+			Wp_Usart2_SendChar(0xff);
+			Wp_Usart2_SendChar(operation_speed / 100 *16 + (operation_speed /10) % 10 );
+
 			UART2_data = 0xff;
 			ModeFlag = 0;
 		}
@@ -486,6 +499,18 @@ void Wp_Sev_TimerPro(void)
 			UART2_data = 0xff;
 			ModeFlag = 1;
 		}
+		if(UART2_data == 0x12 && ReceivingData == 0)//开始喷水,使用倒数第二个outport
+		{
+			Wp_SetPortOutputValue(7,1);
+			UART2_data = 0xff;
+			ModeFlag = 0;
+		}
+		if(UART2_data == 0x13 && ReceivingData == 0)//结束喷水
+		{
+			Wp_SetPortOutputValue(7,0);
+			UART2_data = 0xff;
+			ModeFlag = 0;
+		}
 		
 		if(UART2_data == 0xfe)                          //0xfe时进入接收数据状态，数据范围为0x00-0xfa
 		{
@@ -509,14 +534,6 @@ void Wp_Sev_TimerPro(void)
 			UART2_data = 0xff;
 		}
 		
-    if(firstspeedtemp > 2000)                       //超速保护
-      firstspeedtemp = 2000;
-    if(secondspeedtemp > 2000)   
-      secondspeedtemp = 2000;
-		if(thirdspeedtemp > 2000)   
-      thirdspeedtemp = 2000;
-		if(fourthspeedtemp > 2000)   
-      fourthspeedtemp = 2000;
 		
 		if (++i >= 10)										        // 板载LED频闪
 		{
@@ -696,6 +713,18 @@ void Wp_Sev_TimerPro(void)
 				{
 						if (runflag)
 						{
+							  //回传坐标，1s1次
+								if(SendPositionCount == 20)
+								{
+									
+									Wp_Usart2_SendChar(0xfe);
+									Wp_Usart2_SendChar(((int)location_x) / 10 * 16 + ((int)location_x)  % 10 );
+									Wp_Usart2_SendChar(((int)location_y) / 10 * 16 + ((int)location_y)  % 10 );
+									
+									SendPositionCount = 0;
+								}
+							  SendPositionCount ++;
+							
 								destx = (int)DataFromBle[1]%16 + (int)DataFromBle[1]/16*10;						// 将收到的蓝牙目标地址信息转换为double类型，用到BCD码的转换
 								desty = (int)DataFromBle[2]%16 + (int)DataFromBle[2]/16*10;
 								dx = destx - location_x;																		// 计算小车与目标位置的差值
@@ -1110,10 +1139,12 @@ void Wp_Sev_TimerPro(void)
 											infrareddistance[1] <= 200 || infrareddistance[2] <= 150
 											|| infrareddistance[3] <= 150)		
 							{
-									firstspeedtemp = 0;											// 停止
-									secondspeedtemp = 0;
-									thirdspeedtemp = 0;
-									fourthspeedtemp = 0; 
+									direction = 0;
+							     speed = 0;
+//									firstspeedtemp = 0;											// 停止
+//									secondspeedtemp = 0;
+//									thirdspeedtemp = 0;
+//									fourthspeedtemp = 0; 
 									
 	//								if (counttime < 50)
 	//								{
@@ -1151,10 +1182,12 @@ void Wp_Sev_TimerPro(void)
 											&& infrareddistance[2] >= infrareddistance[1] - 200 
 											&& infrareddistance[1] >= infrareddistance[2] - 200)		// 两边更远
 									{
-											firstspeedtemp = -2000;									// 较快前进
-											secondspeedtemp = 2000;
-											thirdspeedtemp = 2000;
-											fourthspeedtemp = -2000;
+//											firstspeedtemp = -2000;									// 较快前进
+//											secondspeedtemp = 2000;
+//											thirdspeedtemp = 2000;
+//											fourthspeedtemp = -2000;
+											direction = 1;
+							        speed = 2000;
 									}
 									else if (infrareddistance[1] >= 200 && infrareddistance[2] >= 200 				// 目标在前方较近
 													&& infrareddistance[0] >= infrareddistance[1] 
@@ -1162,33 +1195,39 @@ void Wp_Sev_TimerPro(void)
 											&& infrareddistance[2] >= infrareddistance[1] - 200 
 											&& infrareddistance[1] >= infrareddistance[2] - 200)		// 两边更远
 									{
-											firstspeedtemp = -800;									// 较慢前进
-											secondspeedtemp = 800;
-											thirdspeedtemp = 800;
-											fourthspeedtemp = -800;
+//											firstspeedtemp = -800;									// 较慢前进
+//											secondspeedtemp = 800;
+//											thirdspeedtemp = 800;
+//											fourthspeedtemp = -800;
+											direction = 1;
+											speed = 800;
 									}
 									else if (infrareddistance[0] < infrareddistance[1] 
 													|| infrareddistance[1] < infrareddistance[2] - 200 
 													|| infrareddistance[4] < infrareddistance[1] - 50)												// 目标在左边
 									{
-											firstspeedtemp = 1000;							 // 左转
-											secondspeedtemp = 1000;
-											thirdspeedtemp = 1000;
-											fourthspeedtemp = 1000;  
+//											firstspeedtemp = 1000;							 // 左转
+//											secondspeedtemp = 1000;
+//											thirdspeedtemp = 1000;
+//											fourthspeedtemp = 1000;  
+											direction = 5;
+											speed = 1000;
 									}
 									else if (infrareddistance[3] < infrareddistance[2] 
 													|| infrareddistance[2] < infrareddistance[1] - 200
 													|| infrareddistance[5] < infrareddistance[2] - 50)												// 目标在右边
 									{
-											firstspeedtemp = -1000;							 // 右转
-											secondspeedtemp = -1000;
-											thirdspeedtemp = -1000;
-											fourthspeedtemp = -1000;  
+//											firstspeedtemp = -1000;							 // 右转
+//											secondspeedtemp = -1000;
+//											thirdspeedtemp = -1000;
+//											fourthspeedtemp = -1000;  
+											direction = 6;
+							        speed = 1000;
 									}			
 							}
 
         }
-				
+			}
 				
         
         // 避障测试程序，仅使用前4个红外测距传感器，适用于麦克纳姆轮和普通论
@@ -1197,68 +1236,88 @@ void Wp_Sev_TimerPro(void)
             if (infrareddistance[1] >= 200 && infrareddistance[2] >= 200 
                 && infrareddistance[0] >= 200 && infrareddistance[3] >= 200)
             {
+								direction = 1;
+							  speed = 1000;
+							  /*
                 firstspeedtemp = -1000;                 // 前进
                 secondspeedtemp = 1000;
                 thirdspeedtemp = 1000;
                 fourthspeedtemp = -1000;
+							*/
             }
             else if (infrareddistance[1] <= 250)        // 2号红外传感器
             {
-                firstspeedtemp = 0;
-                secondspeedtemp = 0;
-                thirdspeedtemp = 0;
-                fourthspeedtemp = 0;
+//                firstspeedtemp = 0;
+//                secondspeedtemp = 0;
+//                thirdspeedtemp = 0;
+//                fourthspeedtemp = 0;
+								direction = 0;
+							  speed = 0;
                 if (infrareddistance[2] >= 200)         // 右转
                 {
-                    firstspeedtemp = -1000;
-                    secondspeedtemp = -1000;
-                    thirdspeedtemp = -1000;
-                    fourthspeedtemp = -1000;                    
+//                    firstspeedtemp = -1000;
+//                    secondspeedtemp = -1000;
+//                    thirdspeedtemp = -1000;
+//                    fourthspeedtemp = -1000;
+										direction = 6;
+							      speed = 1000;
                 }
 								//firstspeedtemp = -1300;         // 原地旋转
                 //secondspeedtemp = -700;
                //thirdspeedtemp = -1200;
                 //fourthspeedtemp = 500;
-								firstspeedtemp = -1000;						// 右转
-                secondspeedtemp = -1000;
-                thirdspeedtemp = -1000;
-                fourthspeedtemp = -1000; 
+//								firstspeedtemp = -1000;						// 右转
+//                secondspeedtemp = -1000;
+//                thirdspeedtemp = -1000;
+//                fourthspeedtemp = -1000; 
+								direction = 6;
+							  speed = 1000;
             }
             else if (infrareddistance[2] <= 250)        // 3号红外传感器
             {
-                firstspeedtemp = 0;
-                secondspeedtemp = 0;
-                thirdspeedtemp = 0;
-                fourthspeedtemp = 0;	
+//                firstspeedtemp = 0;
+//                secondspeedtemp = 0;
+//                thirdspeedtemp = 0;
+//                fourthspeedtemp = 0;	
+								direction = 0;
+							  speed = 0;
                 if (infrareddistance[1] >= 200)         // 左转
                 {
-                    firstspeedtemp = 1000;
-                    secondspeedtemp = 1000;
-                    thirdspeedtemp = 1000;
-                    fourthspeedtemp = 1000;                   
+//                    firstspeedtemp = 1000;
+//                    secondspeedtemp = 1000;
+//                    thirdspeedtemp = 1000;
+//                    fourthspeedtemp = 1000;    
+										direction = 5;
+							      speed = 1000;									
                 }
 								//firstspeedtemp = 700;         // 原地旋转
                 //secondspeedtemp = 1300;
                 //thirdspeedtemp = -500;
                 //fourthspeedtemp = 1200;
-								firstspeedtemp = 1000;					// 左转
-                secondspeedtemp = 1000;
-                thirdspeedtemp = 1000;
-                fourthspeedtemp = 1000;
+//								firstspeedtemp = 1000;					// 左转
+//                secondspeedtemp = 1000;
+//                thirdspeedtemp = 1000;
+//                fourthspeedtemp = 1000;
+								   direction = 5;
+							      speed = 1000;
             }
             else if (infrareddistance[0] <= 250)        // 右转
             {
-                firstspeedtemp = -1000;
-                secondspeedtemp = -1000;
-                thirdspeedtemp = -1000;
-                fourthspeedtemp = -1000;
+//                firstspeedtemp = -1000;
+//                secondspeedtemp = -1000;
+//                thirdspeedtemp = -1000;
+//                fourthspeedtemp = -1000;
+							      direction = 6;
+							      speed = 1000;
             }
             else if (infrareddistance[3] <= 250)        // 左转
             {
-                firstspeedtemp = 1000;
-                secondspeedtemp = 1000;
-                thirdspeedtemp = 1000;
-                fourthspeedtemp = 1000;
+//                firstspeedtemp = 1000;
+//                secondspeedtemp = 1000;
+//                thirdspeedtemp = 1000;
+//                fourthspeedtemp = 1000;
+							      direction = 5;
+							      speed = 1000;
             }
         }
         
@@ -1554,6 +1613,8 @@ void Wp_Sev_TimerPro(void)
             
         }
         */
+				if(speed > 2000)                     //超速保护
+					speed = 2000;
 				if (runflag)                         // 用direction、speed给电机轮子速度赋值
         {				
 					if((direction == 0)||(direction >6))

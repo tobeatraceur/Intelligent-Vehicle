@@ -56,6 +56,11 @@ extern void Wp_UserTimerSetHadler(void (*ApplicationAddress)(u32));	// ÉèÖÃ¶¨Ê±Æ
 extern void Wp_UserTimerConfigure(void);						    // Timer3Ïà¹Ø³õÊ¼»¯
 extern void Wp_Timer2Configure(void);								// Timer2³õÊ¼»¯º¯Êı
 
+static u32 HighVoltageTime = 0;       //¸ßµçÆ½Âö³å³ÖĞøÊ±¼ä
+static u32 TriggerPluseTime = 0;       //´¥·¢Âö³å³ÖĞøÊ±¼ä
+static int SendFlag = 0;              //¿ªÊ¼´¥·¢±êÖ¾Î»
+static int pre_input = 0;             //ÉÏÒ»¸öÊäÈëµÄÖµ£¬ÓÃÓÚÅĞ¶ÏÌø±ä
+
 
 #endif
 /********************************************************************************************************

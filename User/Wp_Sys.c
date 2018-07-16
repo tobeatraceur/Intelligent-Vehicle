@@ -167,7 +167,7 @@ void Wp_SystemConfigure(void)
     }
 
 	Wp_Timer2Configure();				        // Timer2初始化，系统伺服周期定时10ms
-//	Wp_UserTimerConfigure();			        // Timer3初始化，供用户使用，比较通道0~3作为4个定时器供用户使用    
+	Wp_UserTimerConfigure();			        // Timer3初始化，供用户使用，比较通道0~3作为4个定时器供用户使用    
     
 //  Wp_PwmConfigure();                          // PWM初始化
 //	Wp_PwmSetFrequency(0, 500);			        // 设置PWM0频率为50Hz（默认50%占空比）

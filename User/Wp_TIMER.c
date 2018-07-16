@@ -171,10 +171,32 @@ void TimerHadler(u32 timerchannel)
 	if (timerchannel == TIMER_CHANNEL0)	 		    // 判断是那一路计时器中断
 	{
 		// 中断函数
+		if(SendFlag == 1)
+		    TriggerPluseTime ++;			
+		if(TriggerPluseTime == 10)
+		{
+			Wp_SetPortOutputValue(8,0);
+			SendFlag = 0;
+			TriggerPluseTime = 0;
+			
+		}
+		if(Wp_GetPortInputValue(4) == 1)
+		{
+			HighVoltageTime ++;
+			pre_input = 1;
+		}
+		else if(pre_input == 1)
+		{
+			distance = (float)HighVoltageTime * 0.34 / 2;
+			HighVoltageTime = 0;
+			pre_input = 0;
+		}
 	}
 	else if (timerchannel == TIMER_CHANNEL1)
 	{   
 		// 中断函数
+		Wp_SetPortOutputValue(8,1);
+		SendFlag = 1;
 	}
 	else if (timerchannel == TIMER_CHANNEL2)
 	{
