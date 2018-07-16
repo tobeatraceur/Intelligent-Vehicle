@@ -403,6 +403,7 @@ void Wp_Sev_TimerPro(void)
 		static double destx = 0;												// 用于导航程序，记录目标的坐标
 		static double desty = 0;
 		static int navistate = 0;												// 用于导航程序，记录工作状态，总共3状态，状态0代表寻找方向，状态1代表往目标走，状态2-6代表5种避障状态
+		static int cruisestate = 0;											// 用于建图程序，记录工作状态，0代表向右，1代表向左，2代表向右部分的避障，3代表向左部分的避障
 
 	static u8 i = 0;                    // LED1闪烁
     static u16 j = 0;                   // LED2闪烁
@@ -795,6 +796,11 @@ void Wp_Sev_TimerPro(void)
 											&& infrareddistance[0] >= 200 && infrareddistance[3] >= 200))
 										{
 												direction = 0;
+												Wp_Usart2_SendChar(0xf9);
+												//Wp_Usart2_SendChar(0xfa);
+												//Wp_Usart2_SendChar(((int)location_x) / 10 * 16 + ((int)location_x)  % 10 );
+												//Wp_Usart2_SendChar(((int)location_y) / 10 * 16 + ((int)location_y)  % 10 );
+											
 												if (infrareddistance[0] < 200 && infrareddistance[1] >= 200 &&				// 多种避障状态，障碍物在左边
 													infrareddistance[2] >= 200 && infrareddistance[3] >= 200)
 														navistate = 2;
@@ -819,6 +825,10 @@ void Wp_Sev_TimerPro(void)
 										{
 												direction = 6;
 												speed = 540;
+												if (runtimes == 25)
+												{
+														Wp_Usart2_SendChar(0xf8);
+												}
 										}
 										else if (runtimes > 25 && runtimes <= 75)															// 前进，绕过障碍物
 										{
@@ -838,6 +848,10 @@ void Wp_Sev_TimerPro(void)
 										{
 												direction = 5;
 												speed = 540;
+												if (runtimes == 25)
+												{
+														Wp_Usart2_SendChar(0xf8);
+												}
 										}
 										else if (runtimes > 25 && runtimes <= 75)															// 前进，绕过障碍物
 										{
@@ -857,6 +871,10 @@ void Wp_Sev_TimerPro(void)
 										{
 												direction = 6;
 												speed = 540;
+												if (runtimes == 25)
+												{
+														Wp_Usart2_SendChar(0xf8);
+												}
 										}
 										else if (runtimes > 35 && runtimes <= 85)															// 前进，绕过障碍物
 										{
@@ -876,6 +894,10 @@ void Wp_Sev_TimerPro(void)
 										{
 												direction = 5;
 												speed = 540;
+												if (runtimes == 25)
+												{
+														Wp_Usart2_SendChar(0xf8);
+												}
 										}
 										else if (runtimes > 35 && runtimes <= 85)															// 前进，绕过障碍物
 										{
@@ -895,6 +917,10 @@ void Wp_Sev_TimerPro(void)
 										{
 												direction = 5;
 												speed = 540;
+												if (runtimes == 25)
+												{
+														Wp_Usart2_SendChar(0xf8);
+												}
 										}
 										else if (runtimes > 45 && runtimes <= 95)															// 前进，绕过障碍物
 										{
@@ -910,6 +936,227 @@ void Wp_Sev_TimerPro(void)
 						}	
 				}				
 					
+				// 建图程序
+				
+				if (!runflag)													// 停止运动后回到状态0
+				{
+						cruisestate = 0;
+				}
+				if (DataFromBle[0] == 0xec &&  runflag == 1)
+				{
+					 //回传坐标，1s1次
+								if(SendPositionCount == 20)
+								{
+									
+									Wp_Usart2_SendChar(0xfe);
+									Wp_Usart2_SendChar(((int)location_x) / 10 * 16 + ((int)location_x)  % 10 );
+									Wp_Usart2_SendChar(((int)location_y) / 10 * 16 + ((int)location_y)  % 10 );
+									
+									SendPositionCount = 0;
+								}
+							  SendPositionCount ++;
+								
+								destx = (int)DataFromBle[1]%16 + (int)DataFromBle[1]/16*10;						// 将收到的蓝牙目标地址信息转换为double类型，用到BCD码的转换
+								desty = (int)DataFromBle[2]%16 + (int)DataFromBle[2]/16*10;
+			
+						if (location_y <= desty)													// y边界值，自己定（接口）
+						{
+								if (cruisestate == 0)  															// x轴正方向行走
+								{
+										if (location_x <= destx)
+										{
+												if (infrareddistance[0] >= 200 && infrareddistance[1] >= 200 
+													&& infrareddistance[4] >= 200 && infrareddistance[5] >= 200)						// 遇到障碍物，进入躲避状态
+												{
+														direction = 1;
+														speed = 580;
+												}
+												else 
+												{
+														// 遇到障碍，写接口，红色
+														Wp_Usart2_SendChar(0xf9);
+														cruisestate = 2;
+														runtimes = 0;
+												}
+										}
+										else																						// 到达坐标极限，进入掉头状态
+										{
+												cruisestate = 4;
+												runtimes = 0;
+										}
+								}
+								else if (cruisestate == 1)													// x轴负方向行走	
+								{
+										if (location_x >= 0)
+										{
+												if (infrareddistance[0] >= 200 && infrareddistance[1] >= 200 
+													&& infrareddistance[4] >= 200 && infrareddistance[5] >= 200)						// 遇到障碍物，进入躲避状态
+												{
+														direction = 1;
+														speed = 580;
+												}
+												else 
+												{
+														// 遇到障碍，写接口，红色
+														Wp_Usart2_SendChar(0xf9);
+														cruisestate = 3;
+														runtimes = 0;
+												}
+										}
+										else																								// 到达坐标极限，进入掉头状态
+										{
+												cruisestate = 5;
+												runtimes = 0;
+										}
+								}
+								else if (cruisestate == 2)										// 正方向行走躲避程序
+								{
+										runtimes++;
+										if (runtimes >= 0 && runtimes < 45)											// 左转
+										{
+												direction = 5;
+												speed = 540;
+										}
+										else if (runtimes >= 45 && runtimes < 95)									// 前进
+										{
+												direction = 1;
+												speed = 580;
+										}
+										else if (runtimes >= 95 && runtimes < 140)						// 右转
+										{
+												direction = 6;
+												speed = 540;
+										}
+										else if (runtimes >= 140 && runtimes < 190)								// 前进
+										{
+												direction = 1;
+												speed = 580;
+										}
+										else if (runtimes >= 190 && runtimes < 235)													// 右转
+										{
+												direction = 6;
+												speed = 540;
+										}
+										else if (runtimes >= 235 && runtimes < 285)								// 前进
+										{
+												direction = 1;
+												speed = 580;
+										}
+										else if (runtimes >= 285 && runtimes < 330)								// 左转
+										{
+												direction = 5;
+												speed = 540;
+										}
+										else if (runtimes > 330)												// 回到x正方向行走状态
+										{
+												runtimes = 0;
+												cruisestate = 0;
+										}
+								}
+								else if (cruisestate == 3)											// 与状态2完全相反
+								{
+										runtimes++;
+										if (runtimes >= 0 && runtimes < 45)									
+										{
+												direction = 6;
+												speed = 540;
+												if (runtimes == 25)
+												{
+														// 发消息，变回黑色
+														Wp_Usart2_SendChar(0xf8);
+												}
+										}
+										else if (runtimes >= 45 && runtimes < 95)									// 前进
+										{
+												direction = 1;
+												speed = 580;
+										}
+										else if (runtimes >= 95 && runtimes < 140)					
+										{
+												direction = 5;
+												speed = 540;
+										}
+										else if (runtimes >= 140 && runtimes < 190)								// 前进
+										{
+												direction = 1;
+												speed = 580;
+										}
+										else if (runtimes >= 190 && runtimes < 235)												
+										{
+												direction = 5;
+												speed = 540;
+										}
+										else if (runtimes >= 235 && runtimes < 285)								
+										{
+												direction = 1;
+												speed = 580;
+										}
+										else if (runtimes >= 285 && runtimes < 330)							
+										{
+												direction = 6;
+												speed = 540;
+										}
+										else if (runtimes > 330)												// 回到x正方向行走状态
+										{
+												runtimes = 0;
+												cruisestate = 1;
+										}
+								}
+								else if (cruisestate == 4)											// 正方向掉头状态
+								{
+										runtimes++;
+										if (runtimes >= 0 && runtimes < 45)
+										{
+												direction = 5;
+												speed = 540;
+												if (runtimes == 25)
+												{
+														// 发消息，变回黑色
+														Wp_Usart2_SendChar(0xf8);
+												}
+										}
+										else if (runtimes >= 45 && runtimes < 145)
+										{
+												direction = 1;
+												speed = 580;
+										}
+										else if (runtimes >= 145 && runtimes < 190)
+										{
+												direction = 5;
+												speed = 540;
+										}
+										else if (runtimes > 190)
+										{
+												runtimes = 0;
+												cruisestate = 1;
+										}
+								}
+								else if (cruisestate == 5)																			// 负方向掉头状态
+								{
+										runtimes++;
+										if (runtimes >= 0 && runtimes < 45)
+										{
+												direction = 6;
+												speed = 540;
+										}
+										else if (runtimes >= 45 && runtimes < 145)
+										{
+												direction = 1;
+												speed = 580;
+										}
+										else if (runtimes >= 145 && runtimes < 190)
+										{
+												direction = 6;
+												speed = 540;
+										}
+										else if (runtimes > 190)
+										{
+												runtimes = 0;
+												cruisestate = 0;
+										}
+								}
+						}
+				}					
 				/*
 				// 测试使用，转90度，缓慢前进固定距离
 				if (runflag)
