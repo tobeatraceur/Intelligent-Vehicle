@@ -347,10 +347,11 @@ int main(void)
 										//Wp_DisfloatIntegerandDecimal(0, 2, analogvalue[12], 1, 4);
 										//Wp_DisfloatIntegerandDecimal(0, 3, analogvalue[13], 1, 4);
 										
-                    Wp_DisfloatIntegerandDecimal(7, 0, location_x, 5, 1);
-										Wp_DisfloatIntegerandDecimal(7, 1, location_y, 5, 1);
-										Wp_DisfloatIntegerandDecimal(7, 2, angle, 5, 1);
-										Wp_DisfloatIntegerandDecimal(7, 3, speed, 5, 1);
+										Wp_DisfloatIntegerandDecimal(7, 0, distance, 5, 1);
+                    //Wp_DisfloatIntegerandDecimal(7, 0, location_x, 5, 1);
+										//Wp_DisfloatIntegerandDecimal(7, 1, location_y, 5, 1);
+										//Wp_DisfloatIntegerandDecimal(7, 2, angle, 5, 1);
+										//Wp_DisfloatIntegerandDecimal(7, 3, speed, 5, 1);
                 break;
 										
             default:
@@ -404,6 +405,11 @@ void Wp_Sev_TimerPro(void)
 		static double desty = 0;
 		static int navistate = 0;												// 用于导航程序，记录工作状态，总共3状态，状态0代表寻找方向，状态1代表往目标走，状态2-6代表5种避障状态
 		static int cruisestate = 0;											// 用于建图程序，记录工作状态，0代表向右，1代表向左，2代表向右部分的避障，3代表向左部分的避障
+		static int leftforwardstate = 0;												// 用于灭火程序，用于记录是否在左边开始灭火状态，1代表在该状态
+		static int rightforwardstate = 0;												// 用于灭火程序，用于记录是否在右边开始灭火阶段，1代表在该状态
+		static int leftbackstate = 0;												// 用于灭火程序，用于记录是否在左边回调状态，1代表在该状态
+		static int rightbackstate = 0;												// 用于灭火程序，用于记录是否在右边回调状态，1代表在该状态
+		static int firedis = 0;														// // 用于灭火程序，用于记录火源距离对应的行走时间
 
 	static u8 i = 0;                    // LED1闪烁
     static u16 j = 0;                   // LED2闪烁
@@ -425,7 +431,7 @@ void Wp_Sev_TimerPro(void)
     long secondspeedtemp = 0;
     long thirdspeedtemp = 0;
     long fourthspeedtemp = 0;
-		static long operation_speed = 580;  //手动操作时的速度，默认为580
+		static long operation_speed = gospeed;  //手动操作时的速度，默认为gospeed
 		static u8 direction_command = 0x00;         //手动操作时的方向，默认前进
     
     u8 firstsendok = 0;                 // 成功发送标志
@@ -689,7 +695,7 @@ void Wp_Sev_TimerPro(void)
             }
 						else if(direction_command == 0x05)
             {
-                speed = operation_speed - 40;    //旋转的默认速度为540，即580-40
+                speed = operation_speed - 40;    //旋转的默认速度为turnspeed，即gospeed-40
 							  direction = 5;
             }
 						else if(direction_command == 0x06)
@@ -767,12 +773,12 @@ void Wp_Sev_TimerPro(void)
 												if (dtheta >= 180 || (dtheta <= 0 && dtheta > -180))					// dtheta在180~360以及-180~0度时，左转能更快找到目标方向	
 												{
 														direction = 5;
-														speed = 540;
+														speed = turnspeed;
 												}
 												else																// 其他情况，右转更快
 												{
 														direction = 6;
-														speed = 540;
+														speed = turnspeed;
 												}
 										}
 										else
@@ -784,7 +790,7 @@ void Wp_Sev_TimerPro(void)
 								else if (navistate == 1)									// 前进状态
 								{
 										direction = 1;
-										speed = 580;
+										speed = gospeed;
 										if (dx <= 5 && dx >= -5 && dy <= 5 && dy >= -5)										// 到达目标位置内的一个范围
 										{	
 												DataFromBle[0] = 0xfb;																				// 该导航寄存器的值，退出导航
@@ -824,7 +830,7 @@ void Wp_Sev_TimerPro(void)
 										if (runtimes > 0 && runtimes <= 25)													// 左侧，稍向右转，约50度
 										{
 												direction = 6;
-												speed = 540;
+												speed = turnspeed;
 												if (runtimes == 25)
 												{
 														Wp_Usart2_SendChar(0xf8);
@@ -833,7 +839,7 @@ void Wp_Sev_TimerPro(void)
 										else if (runtimes > 25 && runtimes <= 75)															// 前进，绕过障碍物
 										{
 												direction = 1;
-												speed = 580;
+												speed = gospeed;
 										}
 										else if (runtimes > 75)
 										{
@@ -847,7 +853,7 @@ void Wp_Sev_TimerPro(void)
 										if (runtimes > 0 && runtimes <= 25)													// 右侧，稍向左转，约50度
 										{
 												direction = 5;
-												speed = 540;
+												speed = turnspeed;
 												if (runtimes == 25)
 												{
 														Wp_Usart2_SendChar(0xf8);
@@ -856,7 +862,7 @@ void Wp_Sev_TimerPro(void)
 										else if (runtimes > 25 && runtimes <= 75)															// 前进，绕过障碍物
 										{
 												direction = 1;
-												speed = 580;
+												speed = gospeed;
 										}
 										if (runtimes > 75)															
 										{
@@ -870,7 +876,7 @@ void Wp_Sev_TimerPro(void)
 										if (runtimes > 0 && runtimes <= 35)													// 左前，稍向右转，约70度
 										{
 												direction = 6;
-												speed = 540;
+												speed = turnspeed;
 												if (runtimes == 25)
 												{
 														Wp_Usart2_SendChar(0xf8);
@@ -879,7 +885,7 @@ void Wp_Sev_TimerPro(void)
 										else if (runtimes > 35 && runtimes <= 85)															// 前进，绕过障碍物
 										{
 												direction = 1;
-												speed = 580;
+												speed = gospeed;
 										}
 										if (runtimes > 85)														
 										{
@@ -893,7 +899,7 @@ void Wp_Sev_TimerPro(void)
 										if (runtimes > 0 && runtimes <= 35)												// 右前，稍向左转，约70度
 										{
 												direction = 5;
-												speed = 540;
+												speed = turnspeed;
 												if (runtimes == 25)
 												{
 														Wp_Usart2_SendChar(0xf8);
@@ -902,7 +908,7 @@ void Wp_Sev_TimerPro(void)
 										else if (runtimes > 35 && runtimes <= 85)															// 前进，绕过障碍物
 										{
 												direction = 1;
-												speed = 580;
+												speed = gospeed;
 										}
 										if (runtimes > 85)															
 										{
@@ -916,7 +922,7 @@ void Wp_Sev_TimerPro(void)
 										if (runtimes > 0 && runtimes <= 45)												// 前方，向左转90度
 										{
 												direction = 5;
-												speed = 540;
+												speed = turnspeed;
 												if (runtimes == 25)
 												{
 														Wp_Usart2_SendChar(0xf8);
@@ -925,7 +931,7 @@ void Wp_Sev_TimerPro(void)
 										else if (runtimes > 45 && runtimes <= 95)															// 前进，绕过障碍物
 										{
 												direction = 1;
-												speed = 580;
+												speed = gospeed;
 										}
 										if (runtimes > 95)														
 										{
@@ -936,8 +942,8 @@ void Wp_Sev_TimerPro(void)
 						}	
 				}				
 					
+				/*
 				// 建图程序
-				
 				if (!runflag)													// 停止运动后回到状态0
 				{
 						cruisestate = 0;
@@ -969,7 +975,7 @@ void Wp_Sev_TimerPro(void)
 													&& infrareddistance[4] >= 200 && infrareddistance[5] >= 200)						// 遇到障碍物，进入躲避状态
 												{
 														direction = 1;
-														speed = 580;
+														speed = gospeed;
 												}
 												else 
 												{
@@ -993,7 +999,7 @@ void Wp_Sev_TimerPro(void)
 													&& infrareddistance[4] >= 200 && infrareddistance[5] >= 200)						// 遇到障碍物，进入躲避状态
 												{
 														direction = 1;
-														speed = 580;
+														speed = gospeed;
 												}
 												else 
 												{
@@ -1015,37 +1021,37 @@ void Wp_Sev_TimerPro(void)
 										if (runtimes >= 0 && runtimes < 45)											// 左转
 										{
 												direction = 5;
-												speed = 540;
+												speed = turnspeed;
 										}
 										else if (runtimes >= 45 && runtimes < 95)									// 前进
 										{
 												direction = 1;
-												speed = 580;
+												speed = gospeed;
 										}
 										else if (runtimes >= 95 && runtimes < 140)						// 右转
 										{
 												direction = 6;
-												speed = 540;
+												speed = turnspeed;
 										}
 										else if (runtimes >= 140 && runtimes < 190)								// 前进
 										{
 												direction = 1;
-												speed = 580;
+												speed = gospeed;
 										}
 										else if (runtimes >= 190 && runtimes < 235)													// 右转
 										{
 												direction = 6;
-												speed = 540;
+												speed = turnspeed;
 										}
 										else if (runtimes >= 235 && runtimes < 285)								// 前进
 										{
 												direction = 1;
-												speed = 580;
+												speed = gospeed;
 										}
 										else if (runtimes >= 285 && runtimes < 330)								// 左转
 										{
 												direction = 5;
-												speed = 540;
+												speed = turnspeed;
 										}
 										else if (runtimes > 330)												// 回到x正方向行走状态
 										{
@@ -1059,7 +1065,7 @@ void Wp_Sev_TimerPro(void)
 										if (runtimes >= 0 && runtimes < 45)									
 										{
 												direction = 6;
-												speed = 540;
+												speed = turnspeed;
 												if (runtimes == 25)
 												{
 														// 发消息，变回黑色
@@ -1069,32 +1075,32 @@ void Wp_Sev_TimerPro(void)
 										else if (runtimes >= 45 && runtimes < 95)									// 前进
 										{
 												direction = 1;
-												speed = 580;
+												speed = gospeed;
 										}
 										else if (runtimes >= 95 && runtimes < 140)					
 										{
 												direction = 5;
-												speed = 540;
+												speed = turnspeed;
 										}
 										else if (runtimes >= 140 && runtimes < 190)								// 前进
 										{
 												direction = 1;
-												speed = 580;
+												speed = gospeed;
 										}
 										else if (runtimes >= 190 && runtimes < 235)												
 										{
 												direction = 5;
-												speed = 540;
+												speed = turnspeed;
 										}
 										else if (runtimes >= 235 && runtimes < 285)								
 										{
 												direction = 1;
-												speed = 580;
+												speed = gospeed;
 										}
 										else if (runtimes >= 285 && runtimes < 330)							
 										{
 												direction = 6;
-												speed = 540;
+												speed = turnspeed;
 										}
 										else if (runtimes > 330)												// 回到x正方向行走状态
 										{
@@ -1108,7 +1114,7 @@ void Wp_Sev_TimerPro(void)
 										if (runtimes >= 0 && runtimes < 45)
 										{
 												direction = 5;
-												speed = 540;
+												speed = turnspeed;
 												if (runtimes == 25)
 												{
 														// 发消息，变回黑色
@@ -1118,12 +1124,12 @@ void Wp_Sev_TimerPro(void)
 										else if (runtimes >= 45 && runtimes < 145)
 										{
 												direction = 1;
-												speed = 580;
+												speed = gospeed;
 										}
 										else if (runtimes >= 145 && runtimes < 190)
 										{
 												direction = 5;
-												speed = 540;
+												speed = turnspeed;
 										}
 										else if (runtimes > 190)
 										{
@@ -1137,17 +1143,17 @@ void Wp_Sev_TimerPro(void)
 										if (runtimes >= 0 && runtimes < 45)
 										{
 												direction = 6;
-												speed = 540;
+												speed = turnspeed;
 										}
 										else if (runtimes >= 45 && runtimes < 145)
 										{
 												direction = 1;
-												speed = 580;
+												speed = gospeed;
 										}
 										else if (runtimes >= 145 && runtimes < 190)
 										{
 												direction = 6;
-												speed = 540;
+												speed = turnspeed;
 										}
 										else if (runtimes > 190)
 										{
@@ -1156,7 +1162,9 @@ void Wp_Sev_TimerPro(void)
 										}
 								}
 						}
-				}					
+				}	
+				*/
+				
 				/*
 				// 测试使用，转90度，缓慢前进固定距离
 				if (runflag)
@@ -1197,103 +1205,113 @@ void Wp_Sev_TimerPro(void)
 				}
 				*/
 				
-				/*
-				// 灭火程序。前进，寻找高温，确认找到后转向，执行，转回
-				if (runflag == 1 && ModeFlag == 3)
+					// 灭火程序。前进，寻找高温，确认找到后转向，执行，转回
+				//if (runflag == 1 && ModeFlag == 3)
+				if (runflag)
         {
-						if (normalstate == 1 && leftturnstate == 0 && rightturnstate == 0)
+						if (normalstate == 1)
 						{
-								if (analogvalue[10] < 0.27 && analogvalue[11] < 0.27)			// 侧前方两个探头都没有探到高温，则前进（之后会改成循迹）
+								if (analogvalue[10] > 1.5 && analogvalue[11] > 1.5)			// 侧方两个探头都没有探到火焰，则前进（之后会改成循迹）
 								{
-										firstspeedtemp = -200;									// 较快前进
-										secondspeedtemp = 200;
-										thirdspeedtemp = 200;
-										fourthspeedtemp = -200;
 										runtimes = 0;														// 时间清零 
-								}
-								else if (analogvalue[10] >= 0.27)
-								{
-										leftreassure = 1;
-										normalstate = 0;
-										runtimes = 0;
-								}
-								else if (analogvalue[11] >= 0.27)
-								{
-										rightreassure = 1;
-										normalstate = 0;
-										runtimes = 0;
-								}
-						}
-						else if (leftreassure == 1 || rightreassure == 1)		// 如果左/右检测到异常
-						{
-								runtimes++;
-								if (runtimes < 100)
-								{
-										firstspeedtemp = 100;									// 缓慢前进固定时间，之后停止
-										secondspeedtemp = -100;
-										thirdspeedtemp = -100;
-										fourthspeedtemp = 100;
-								}
-								else 																				// 停止之后，看传感器的值决定进入哪一个状态
-								{
-										runtimes = 100;
-										if (leftreassure == 1)											// 左边
+										direction = 1;
+										speed = 200;
+										/*
+										if (luxvalue[1] <= 250 && luxvalue[2] <= 250)
 										{
-												if (analogvalue[12] > 0.28)							// 作为确认，比检测留的阈值要大一些
+												direction = 1;                // 前进
+												speed = 200;
+												if (luxvalue[0] <= 250 && luxvalue[3] >= 200)		//标记急转弯前一时刻状态，a = 0代表左边有道轨道
 												{
-														leftreassure = 0;
-														leftonwork = 1;											// 进入左边工作状态
-														leftturnstate = 1;									// 开始完成左转
-														runtimes = 0;
+														preState = 0;
 												}
-												else																		// 没有得到确认，回到正常巡检状态
+												if (luxvalue[0] >= 200 && luxvalue[2] <= 250)
 												{
-														normalstate = 1;
-														leftreassure = 0;
+														preState = 1;
 												}
 										}
-										else if (rightreassure == 1)								// 右边
+										else        // 脱离轨道
 										{
-												if (analogvalue[13] > 0.28)							// 作为确认，比检测留的阈值要大一些
+												direction = 0;
+											
+												if (luxvalue[1] <= 200 && luxvalue[2] >= 250) 		//向右微偏出，需要向左微调
 												{
-														rightreassure = 0;
-														rightonwork = 1;										// 进入右边工作状态
-														rightturnstate = 1;									// 开始完成右转
-														runtimes = 0;
+														direction = 5;
+														speed = 300;
 												}
-												else																		// 没有得到确认，回到正常巡检状态
+												else if (luxvalue[2] <= 200 && luxvalue[1] >= 250) 		//向左微偏出，需要向右微调
 												{
-														normalstate = 1;
-														rightreassure = 0;
+														direction = 6;
+														speed = 300;
 												}
-										}
-								}					
+												else if (luxvalue[0] <= 200) 		//向右偏出，需要向左调
+												{
+														direction = 5;        // 原地旋转
+														speed = 350;
+												}
+												else if (luxvalue[3] <= 200) 		//向左偏出，需要向右调
+												{
+														direction = 6;        // 原地旋转
+														speed = 350;
+												}
+												//出现无法探测到轨道的情况，需要利用前一时刻的信息，进行旋转
+												else if (preState == 0)								//左边有轨道，向左旋转
+												{
+														direction = 5;        // 原地旋转
+														speed = 350;
+												}
+												else 							//右边有轨道，向右旋转
+												{
+														direction = 6;        // 原地旋转
+														speed = 350;
+												}
+												*/
+								}
+						
+								else if (analogvalue[10] <= 1.5)
+								{
+										normalstate = 0;
+										leftonwork = 1;											// 进入左边工作状态
+										leftforwardstate = 1;									// 开始完成左转
+										runtimes = 0;
+								}
+								else if (analogvalue[11] <= 1.5)
+								{
+										normalstate = 0;
+										rightonwork = 1;										// 进入右边工作状态
+										rightforwardstate = 1;									// 开始完成右转
+										runtimes = 0;
+								}
 						}
 						else if (leftonwork == 1 || rightonwork == 1)				// 左边/右边工作状态
 						{
-								if (leftturnstate == 0 && rightturnstate == 0)		// 是否完成左转/右转？完成后进入下面部分
-								{
+								if (leftforwardstate == 0 && rightforwardstate == 0)		// 是否完成左转/右转？完成后进入下面部分
+								{		
+										runtimes++;
 										if (runtimes > 0 && runtimes <= 20)						// 调整工作时间
 										{
 												// 驱动执行机构
-										}										
-										runtimes++;
+												Wp_SetPortOutputValue(7,1);
+										}
+										else
+										{
+												Wp_SetPortOutputValue(7,0);
+										}
 										if (runtimes > 100)														// 确认传感器的值低于阈值,进行相应左右转，并回到正常状态
 										{
-												if (analogvalue[14] < 0.27)				// 一段时间后检测确认传感器的值是否低于阈值
+												if (analogvalue[12] > 3)				// 一段时间后检测确认传感器的值是否高于阈值
 												{
 														if (leftonwork == 1)						// 在左边工作
 														{
 																leftonwork = 0;
-																rightturnstate = 1;					// 触发右转
+																leftbackstate = 1;					// 触发后退及右转
 														}
 														else if (rightonwork == 1)			// 在右边工作
 														{
 																rightonwork = 0;
-																leftturnstate = 1;					// 触发左转
+																rightbackstate = 1;					// 触发后退及左转
 														}
 														runtimes = 0;
-														backtonormal = 1;							// 工作后回到正常状态
 												}
 												else															// 灭火没有成功，重新灭火
 												{
@@ -1303,77 +1321,101 @@ void Wp_Sev_TimerPro(void)
 								}
 						}
 						
-						if (backtonormal == 1)										// 刚执行完任务，留有时间给温度传感器恢复
+						if (leftforwardstate == 1)										// 左边开始灭火状态
+						{
+								runtimes ++;
+								if (runtimes <= 50)											// 在既定时间内以既定速度左转，左转了既定角度
+								{
+										direction = 5;							 // 左转
+										speed = 400;
+								}
+								else if (!(distance > 5 && distance < 11))
+								{
+										direction = 1;
+										speed = 250;
+								}
+								else
+								{
+										firedis = runtimes;
+										leftforwardstate = 0;
+										direction = 0;
+										runtimes = 0;
+								}
+						}
+						else if (rightforwardstate == 1)									// 右转状态
+						{
+								runtimes ++;
+								if (runtimes <= 50)												// 在既定时间内以既定速度右转，右转了既定角度
+								{
+										direction = 6;						 // 右转
+										speed = 400;
+								}
+								/*else if (runtimes == 50)
+								{
+										firedis = 2* (distance - 10);					// 计算为了接近目标而需要走的时间，截距待调
+								}
+								else if (runtimes > 50 && runtimes < firedis + 50)
+								{
+										direction = 1;
+										speed = 290;
+								}
+								*/
+								else if (!(distance > 5 && distance < 11))
+								{
+										direction = 1;
+										speed = 250;
+								}
+								//else if (runtimes > firedis + 50)
+								else
+								{
+										firedis = runtimes;
+										rightforwardstate = 0;
+										direction = 0;
+										runtimes = 0;
+								}
+						}			
+						if (leftbackstate == 1)																	// 左边回归状态
 						{
 								runtimes++;
-								if (runtimes < 50)
+								if (runtimes >= 0 && runtimes <= firedis - 50)
 								{
-										if (leftturnstate == 1)
-										{
-												firstspeedtemp = 500;							 // 左转
-												secondspeedtemp = 500;
-												thirdspeedtemp = 500;
-												fourthspeedtemp = 500; 
-										}
-										if (rightturnstate == 1)
-										{
-												firstspeedtemp = -500;							 // 右转
-												secondspeedtemp = -500;
-												thirdspeedtemp = -500;
-												fourthspeedtemp = -500; 
-										}
+										direction = 2;
+										speed = 290;
 								}
-								else if (runtimes >= 50 && runtimes <= 150)									// 这段时间内只前进（循迹），不管传感器									{
+								else if (runtimes < firedis)
 								{
-										firstspeedtemp = -200;									// 较快前进
-										secondspeedtemp = 200;
-										thirdspeedtemp = 200;
-										fourthspeedtemp = -200;
+										direction = 6;
+										speed = 400;
 								}
-								else if (runtimes > 150)
+								else if (runtimes > firedis)
 								{
+										runtimes = 0;
+										leftbackstate = 0;
 										normalstate = 1;
-										leftturnstate = 0;
-										rightturnstate = 0;
-										backtonormal = 0;
-										runtimes = 0;
 								}
 						}
-						else if (leftturnstate == 1)										// 左转状态
+						else if (rightbackstate == 1)																	// 右边回归状态
 						{
-								runtimes ++;
-								if (runtimes < 50)
+								runtimes++;
+								if (runtimes >= 0 && runtimes <= firedis - 50)
 								{
-										firstspeedtemp = 500;							 // 左转
-										secondspeedtemp = 500;
-										thirdspeedtemp = 500;
-										fourthspeedtemp = 500; 
+										direction = 2;
+										speed = 290;
 								}
-								else
+								else if (runtimes < firedis)
 								{
-										leftturnstate = 0;								// 在既定时间内以既定速度左转，左转了既定角度
+										direction = 5;
+										speed = 400;
+								}
+								else if (runtimes > firedis)
+								{
 										runtimes = 0;
+										rightbackstate = 0;
+										normalstate = 1;
 								}
 						}
-						else if (rightturnstate == 1)									// 右转状态
-						{
-								runtimes ++;
-								if (runtimes < 50)
-								{
-										firstspeedtemp = -500;							 // 右转
-										secondspeedtemp = -500;
-										thirdspeedtemp = -500;
-										fourthspeedtemp = -500; 
-								}
-								else
-								{
-										rightturnstate = 0;								// 在既定时间内以既定速度右转，右转了既定角度
-										runtimes = 0;
-								}
-						}
-						
 				}
-				*/
+				
 				
 				
 				
