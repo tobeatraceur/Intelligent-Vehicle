@@ -1288,16 +1288,50 @@ void Wp_Sev_TimerPro(void)
 								if (leftforwardstate == 0 && rightforwardstate == 0)		// 是否完成左转/右转？完成后进入下面部分
 								{		
 										runtimes++;
-										if (runtimes > 0 && runtimes <= 20)						// 调整工作时间
+										if (runtimes > 0 && runtimes <= 3)						// 调整工作时间
 										{
 												// 驱动执行机构
 												Wp_SetPortOutputValue(7,1);
 										}
-										else
+										else if (runtimes > 3 && runtimes <= 30)
 										{
+										}
+										else if (runtimes > 30 && runtimes <= 50)
+										{
+												direction = 2;
+												speed = 200;
+										}
+										else if (runtimes > 50 && runtimes <= 60)
+										{
+												direction = 1;
+												speed = 200;
+										}
+										else if (runtimes > 60 && runtimes <= 70)
+										{
+												direction = 5;
+												speed = 200;
+										}
+										else if (runtimes > 70 && runtimes <= 90)
+										{
+												direction = 6;
+												speed = 200;
+										}
+										else if (runtimes > 90 && runtimes <= 100)
+										{
+												direction = 5;
+												speed = 200;
+										}
+										else if (runtimes > 100 && runtimes <= 110)
+										{
+												direction = 2;
+												speed = 200;
 												Wp_SetPortOutputValue(7,0);
 										}
-										if (runtimes > 100)														// 确认传感器的值低于阈值,进行相应左右转，并回到正常状态
+										else if (runtimes > 110)
+										{
+												direction = 0;
+										}
+										if (runtimes > 130)														// 确认传感器的值低于阈值,进行相应左右转，并回到正常状态
 										{
 												if (analogvalue[12] > 3)				// 一段时间后检测确认传感器的值是否高于阈值
 												{
@@ -1327,9 +1361,9 @@ void Wp_Sev_TimerPro(void)
 								if (runtimes <= 50)											// 在既定时间内以既定速度左转，左转了既定角度
 								{
 										direction = 5;							 // 左转
-										speed = 400;
+										speed = 390;
 								}
-								else if (!(distance > 5 && distance < 11))
+								else if (!(distance > 5 && distance < 10))
 								{
 										direction = 1;
 										speed = 250;
@@ -1348,7 +1382,7 @@ void Wp_Sev_TimerPro(void)
 								if (runtimes <= 50)												// 在既定时间内以既定速度右转，右转了既定角度
 								{
 										direction = 6;						 // 右转
-										speed = 400;
+										speed = 390;
 								}
 								/*else if (runtimes == 50)
 								{
@@ -1360,7 +1394,7 @@ void Wp_Sev_TimerPro(void)
 										speed = 290;
 								}
 								*/
-								else if (!(distance > 5 && distance < 11))
+								else if (!(distance > 5 && distance < 10))
 								{
 										direction = 1;
 										speed = 250;
@@ -1382,10 +1416,10 @@ void Wp_Sev_TimerPro(void)
 										direction = 2;
 										speed = 290;
 								}
-								else if (runtimes < firedis)
+								else if (runtimes <= firedis)
 								{
 										direction = 6;
-										speed = 400;
+										speed = 390;
 								}
 								else if (runtimes > firedis)
 								{
@@ -1402,10 +1436,10 @@ void Wp_Sev_TimerPro(void)
 										direction = 2;
 										speed = 290;
 								}
-								else if (runtimes < firedis)
+								else if (runtimes <= firedis)
 								{
 										direction = 5;
-										speed = 400;
+										speed = 390;
 								}
 								else if (runtimes > firedis)
 								{
