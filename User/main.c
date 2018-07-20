@@ -791,7 +791,7 @@ void Wp_Sev_TimerPro(void)
 								{
 										direction = 1;
 										speed = gospeed;
-										if (dx <= 5 && dx >= -5 && dy <= 5 && dy >= -5)										// 到达目标位置内的一个范围
+										if (dx <= 4 && dx >= -4 && dy <= 4 && dy >= -4)										// 到达目标位置内的一个范围
 										{	
 												DataFromBle[0] = 0xfb;																				// 该导航寄存器的值，退出导航
 												direction = 0;
@@ -942,7 +942,7 @@ void Wp_Sev_TimerPro(void)
 						}	
 				}				
 					
-				/*
+				
 				// 建图程序
 				if (!runflag)													// 停止运动后回到状态0
 				{
@@ -1022,6 +1022,11 @@ void Wp_Sev_TimerPro(void)
 										{
 												direction = 5;
 												speed = turnspeed;
+												if (runtimes == 25)
+												{
+														// 发消息，变回黑色
+														Wp_Usart2_SendChar(0xf8);
+												}
 										}
 										else if (runtimes >= 45 && runtimes < 95)									// 前进
 										{
@@ -1115,11 +1120,6 @@ void Wp_Sev_TimerPro(void)
 										{
 												direction = 5;
 												speed = turnspeed;
-												if (runtimes == 25)
-												{
-														// 发消息，变回黑色
-														Wp_Usart2_SendChar(0xf8);
-												}
 										}
 										else if (runtimes >= 45 && runtimes < 145)
 										{
@@ -1163,7 +1163,7 @@ void Wp_Sev_TimerPro(void)
 								}
 						}
 				}	
-				*/
+				
 				
 				/*
 				// 测试使用，转90度，缓慢前进固定距离
@@ -1206,26 +1206,26 @@ void Wp_Sev_TimerPro(void)
 				*/
 				
 					// 灭火程序。前进，寻找高温，确认找到后转向，执行，转回
-				//if (runflag == 1 && ModeFlag == 3)
-				if (runflag)
+				if (runflag == 1 && ModeFlag == 3)
+				//if (runflag)
         {
 						if (normalstate == 1)
 						{
 								if (analogvalue[10] > 1.5 && analogvalue[11] > 1.5)			// 侧方两个探头都没有探到火焰，则前进（之后会改成循迹）
 								{
 										runtimes = 0;														// 时间清零 
-										direction = 1;
-										speed = 200;
-										/*
-										if (luxvalue[1] <= 250 && luxvalue[2] <= 250)
+										//direction = 1;
+										//speed = 200;
+										
+										if (luxvalue[1] <= 500 && luxvalue[2] <= 500)
 										{
-												direction = 1;                // 前进
+												direction = 1;							// 前进
 												speed = 200;
-												if (luxvalue[0] <= 250 && luxvalue[3] >= 200)		//标记急转弯前一时刻状态，a = 0代表左边有道轨道
+												if (luxvalue[0] <= 500 && luxvalue[3] >= 450)		//标记急转弯前一时刻状态，a = 0代表左边有道轨道
 												{
 														preState = 0;
 												}
-												if (luxvalue[0] >= 200 && luxvalue[2] <= 250)
+												if (luxvalue[0] >= 500 && luxvalue[2] <= 500)
 												{
 														preState = 1;
 												}
@@ -1234,38 +1234,39 @@ void Wp_Sev_TimerPro(void)
 										{
 												direction = 0;
 											
-												if (luxvalue[1] <= 200 && luxvalue[2] >= 250) 		//向右微偏出，需要向左微调
+												if (luxvalue[1] <= 450 && luxvalue[2] >= 500) 		//向右微偏出，需要向左微调
 												{
 														direction = 5;
-														speed = 300;
+														speed = 200;
 												}
-												else if (luxvalue[2] <= 200 && luxvalue[1] >= 250) 		//向左微偏出，需要向右微调
+												else if (luxvalue[2] <= 450 && luxvalue[1] >= 500) 		//向左微偏出，需要向右微调
 												{
 														direction = 6;
-														speed = 300;
+														speed = 200;
 												}
-												else if (luxvalue[0] <= 200) 		//向右偏出，需要向左调
+												else if (luxvalue[0] <= 450) 		//向右偏出，需要向左调
 												{
-														direction = 5;        // 原地旋转
-														speed = 350;
+														direction = 5;         // 原地旋转
+														speed = 250;
 												}
-												else if (luxvalue[3] <= 200) 		//向左偏出，需要向右调
+												else if (luxvalue[3] <= 450) 		//向左偏出，需要向右调
 												{
 														direction = 6;        // 原地旋转
-														speed = 350;
+														speed = 250;
 												}
 												//出现无法探测到轨道的情况，需要利用前一时刻的信息，进行旋转
 												else if (preState == 0)								//左边有轨道，向左旋转
 												{
-														direction = 5;        // 原地旋转
-														speed = 350;
+														direction = 5;         // 原地旋转
+														speed = 250;
 												}
 												else 							//右边有轨道，向右旋转
 												{
 														direction = 6;        // 原地旋转
-														speed = 350;
+														speed = 250;
 												}
-												*/
+										}
+
 								}
 						
 								else if (analogvalue[10] <= 1.5)
@@ -1274,6 +1275,7 @@ void Wp_Sev_TimerPro(void)
 										leftonwork = 1;											// 进入左边工作状态
 										leftforwardstate = 1;									// 开始完成左转
 										runtimes = 0;
+									  Wp_Usart2_SendChar(0x03);
 								}
 								else if (analogvalue[11] <= 1.5)
 								{
@@ -1281,6 +1283,7 @@ void Wp_Sev_TimerPro(void)
 										rightonwork = 1;										// 进入右边工作状态
 										rightforwardstate = 1;									// 开始完成右转
 										runtimes = 0;
+										Wp_Usart2_SendChar(0x03);
 								}
 						}
 						else if (leftonwork == 1 || rightonwork == 1)				// 左边/右边工作状态
@@ -1323,7 +1326,7 @@ void Wp_Sev_TimerPro(void)
 										}
 										else if (runtimes > 100 && runtimes <= 110)
 										{
-												direction = 2;
+												direction = 1;
 												speed = 200;
 												Wp_SetPortOutputValue(7,0);
 										}
@@ -1456,8 +1459,6 @@ void Wp_Sev_TimerPro(void)
 				//测试使用，目标追踪，麦克纳姆轮
 				if (ModeFlag == 1 && runflag == 1)
         {
-
-						{
 							if (infrareddistance[0] <= 200	||			// 目标较近
 											infrareddistance[1] <= 200 || infrareddistance[2] <= 150
 											|| infrareddistance[3] <= 150)		
@@ -1510,7 +1511,7 @@ void Wp_Sev_TimerPro(void)
 //											thirdspeedtemp = 2000;
 //											fourthspeedtemp = -2000;
 											direction = 1;
-							        speed = 2000;
+							        speed = 800;
 									}
 									else if (infrareddistance[1] >= 200 && infrareddistance[2] >= 200 				// 目标在前方较近
 													&& infrareddistance[0] >= infrareddistance[1] 
@@ -1523,7 +1524,7 @@ void Wp_Sev_TimerPro(void)
 //											thirdspeedtemp = 800;
 //											fourthspeedtemp = -800;
 											direction = 1;
-											speed = 800;
+											speed = 400;
 									}
 									else if (infrareddistance[0] < infrareddistance[1] 
 													|| infrareddistance[1] < infrareddistance[2] - 200 
@@ -1534,7 +1535,7 @@ void Wp_Sev_TimerPro(void)
 //											thirdspeedtemp = 1000;
 //											fourthspeedtemp = 1000;  
 											direction = 5;
-											speed = 1000;
+											speed = 750;
 									}
 									else if (infrareddistance[3] < infrareddistance[2] 
 													|| infrareddistance[2] < infrareddistance[1] - 200
@@ -1545,22 +1546,29 @@ void Wp_Sev_TimerPro(void)
 //											thirdspeedtemp = -1000;
 //											fourthspeedtemp = -1000;  
 											direction = 6;
-							        speed = 1000;
+							        speed = 750;
 									}			
 							}
-
-        }
+					if (distance > 70 && distance < 120)
+					{
+							direction = 1;
+							speed = 800;
+					}
+					if (distance < 30)
+					{
+							direction = 0;
+					}
 			}
 				
         
         // 避障测试程序，仅使用前4个红外测距传感器，适用于麦克纳姆轮和普通论
         if (runflag == 1 && ModeFlag == 2)
         {
-            if (infrareddistance[1] >= 200 && infrareddistance[2] >= 200 
+            if (infrareddistance[1] >= 250 && infrareddistance[2] >= 250 
                 && infrareddistance[0] >= 200 && infrareddistance[3] >= 200)
             {
 								direction = 1;
-							  speed = 1000;
+							  speed = 600;
 							  /*
                 firstspeedtemp = -1000;                 // 前进
                 secondspeedtemp = 1000;
@@ -1583,7 +1591,7 @@ void Wp_Sev_TimerPro(void)
 //                    thirdspeedtemp = -1000;
 //                    fourthspeedtemp = -1000;
 										direction = 6;
-							      speed = 1000;
+							      speed = 600;
                 }
 								//firstspeedtemp = -1300;         // 原地旋转
                 //secondspeedtemp = -700;
@@ -1594,7 +1602,7 @@ void Wp_Sev_TimerPro(void)
 //                thirdspeedtemp = -1000;
 //                fourthspeedtemp = -1000; 
 								direction = 6;
-							  speed = 1000;
+							  speed = 600;
             }
             else if (infrareddistance[2] <= 250)        // 3号红外传感器
             {
@@ -1611,7 +1619,7 @@ void Wp_Sev_TimerPro(void)
 //                    thirdspeedtemp = 1000;
 //                    fourthspeedtemp = 1000;    
 										direction = 5;
-							      speed = 1000;									
+							      speed = 600;									
                 }
 								//firstspeedtemp = 700;         // 原地旋转
                 //secondspeedtemp = 1300;
@@ -1622,7 +1630,7 @@ void Wp_Sev_TimerPro(void)
 //                thirdspeedtemp = 1000;
 //                fourthspeedtemp = 1000;
 								   direction = 5;
-							      speed = 1000;
+							      speed = 600;
             }
             else if (infrareddistance[0] <= 250)        // 右转
             {
@@ -1631,7 +1639,7 @@ void Wp_Sev_TimerPro(void)
 //                thirdspeedtemp = -1000;
 //                fourthspeedtemp = -1000;
 							      direction = 6;
-							      speed = 1000;
+							      speed = 600;
             }
             else if (infrareddistance[3] <= 250)        // 左转
             {
@@ -1640,7 +1648,7 @@ void Wp_Sev_TimerPro(void)
 //                thirdspeedtemp = 1000;
 //                fourthspeedtemp = 1000;
 							      direction = 5;
-							      speed = 1000;
+							      speed = 600;
             }
         }
         
@@ -1649,70 +1657,53 @@ void Wp_Sev_TimerPro(void)
 				 // 测试使用，循迹程序，仅使用中间4个灰度传感器，适用于麦克纳姆轮和普通轮
         if (runflag)
         {
-            if (luxvalue[1] <= 250 && luxvalue[2] <= 250)
+            if (luxvalue[1] <= 500 && luxvalue[2] <= 500)
             {
-                firstspeedtemp = -500;                 // 前进
-                secondspeedtemp = 500;
-                thirdspeedtemp = 500;
-                fourthspeedtemp = -500;
-								if (luxvalue[0] <= 250 && luxvalue[3] >= 200)		//标记急转弯前一时刻状态，a = 0代表左边有道轨道
+                direction = 1;							// 前进
+                speed = 500;
+								if (luxvalue[0] <= 500 && luxvalue[3] >= 450)		//标记急转弯前一时刻状态，a = 0代表左边有道轨道
 								{
 										preState = 0;
 								}
-								if (luxvalue[0] >= 200 && luxvalue[2] <= 250)
+								if (luxvalue[0] >= 500 && luxvalue[2] <= 500)
 								{
 										preState = 1;
 								}
             }
             else        // 脱离轨道
             {
-                firstspeedtemp = 0;
-                secondspeedtemp = 0;
-                thirdspeedtemp = 0;
-                fourthspeedtemp = 0;
+                direction = 0;
 							
-								if (luxvalue[1] <= 200 && luxvalue[2] >= 250) 		//向右微偏出，需要向左微调
+								if (luxvalue[1] <= 450 && luxvalue[2] >= 500) 		//向右微偏出，需要向左微调
 								{
-										firstspeedtemp = 300;
-										secondspeedtemp = 300;
-										thirdspeedtemp = 300;
-										fourthspeedtemp = 300;
+										direction = 5;
+										speed = 300;
 								}
-								else if (luxvalue[2] <= 200 && luxvalue[1] >= 250) 		//向左微偏出，需要向右微调
+								else if (luxvalue[2] <= 450 && luxvalue[1] >= 500) 		//向左微偏出，需要向右微调
 								{
-										firstspeedtemp = -300;
-										secondspeedtemp = -300;
-										thirdspeedtemp = -300;
-										fourthspeedtemp = -300;
+										direction = 6;
+										speed = 300;
 								}
-								else if (luxvalue[0] <= 200) 		//向右偏出，需要向左调
+								else if (luxvalue[0] <= 450) 		//向右偏出，需要向左调
 								{
-										firstspeedtemp = 350;         // 原地旋转
-										secondspeedtemp = 650;
-										thirdspeedtemp = -250;
-										fourthspeedtemp = 600;
+										direction = 5;         // 原地旋转
+										speed = 350;
 								}
-								else if (luxvalue[3] <= 200) 		//向左偏出，需要向右调
+								else if (luxvalue[3] <= 450) 		//向左偏出，需要向右调
 								{
-										firstspeedtemp = -650;         // 原地旋转
-										secondspeedtemp = -350;
-										thirdspeedtemp = -600;
-										fourthspeedtemp = 250;
+										direction = 6;        // 原地旋转
+										speed = 350;
 								}
 								//出现无法探测到轨道的情况，需要利用前一时刻的信息，进行旋转
 								else if (preState == 0)								//左边有轨道，向左旋转
 								{
-										firstspeedtemp = 350;         // 原地旋转
-										secondspeedtemp = 750;
-										thirdspeedtemp = -250;
-										fourthspeedtemp = 700;
+										direction = 5;         // 原地旋转
+										speed = 350;
 								}
 								else 							//右边有轨道，向右旋转
 								{
-										firstspeedtemp = -750;         // 原地旋转
-										secondspeedtemp = -350;
-										thirdspeedtemp = -700;
-										fourthspeedtemp = 250;
+										direction = 6;        // 原地旋转
+										speed = 350;
 								}
 						}
 				}
@@ -1936,8 +1927,8 @@ void Wp_Sev_TimerPro(void)
             
         }
         */
-				if(speed > 2000)                     //超速保护
-					speed = 2000;
+				if(speed > 1000)                     //超速保护
+					speed = 1000;
 				if (runflag)                         // 用direction、speed给电机轮子速度赋值
         {				
 					if((direction == 0)||(direction >6))

@@ -30,8 +30,8 @@
 #define WP_GLOBLE_H
 
 #define PI 3.141592653
-#define gospeed 580
-#define turnspeed 540
+#define gospeed 450
+#define turnspeed 440
 
 #include "stm32f10x.h"
 #include "Wp_Key.h"
