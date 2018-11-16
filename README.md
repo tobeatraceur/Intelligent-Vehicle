@@ -4,4 +4,4 @@ Manual moving，
 Navigation，
 Dynamic obstacle avoidance，
 Tracking lines，
-Fire-fighting，
+Fire-fighting
